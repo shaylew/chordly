@@ -14,7 +14,8 @@
   "dependencies": {
     "next": "^9.3.0",
     "react": "^16.13.0",
-    "react-dom": "^16.13.0"
+    "react-dom": "^16.13.0",
+    "tone": "^14.5.41"
   },
   "devDependencies": {
     "@types/node": "^13.9.0",
