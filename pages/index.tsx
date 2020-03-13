@@ -1,15 +1,25 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NextPage } from 'next';
-import dynamic from 'next/dynamic';
 
-const Boop = dynamic(() => import('../components/boop'), { ssr: false });
+import { SynthProvider } from '../components/SynthContext';
+
+import ChordGrid from '../components/ChordGrid';
 
 const Index: NextPage<{}> = () => {
   return (
-    <div>
-      <h1>Click Me?</h1>
-      <Boop />
-    </div>
+    <SynthProvider>
+      <main>
+        <h1>Click Me?</h1>
+        <ChordGrid />
+        <style jsx>{`
+          main {
+            min-height: 100vh;
+            height: 100%;
+            background-color: #222;
+          }
+        `}</style>
+      </main>
+    </SynthProvider>
   );
 };
 
