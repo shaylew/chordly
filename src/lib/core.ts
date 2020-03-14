@@ -1,6 +1,6 @@
 import * as Tone from 'tone';
 
-import { Time, Synth, Song, Chord, toNotes } from './types';
+import { Time, Synth, Song, Chord, toNotes } from '../types';
 
 function mkSynth(voices: number): Synth {
   return new Tone.PolySynth({

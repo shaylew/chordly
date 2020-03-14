@@ -2,10 +2,10 @@ import React from 'react';
 import { NextPage } from 'next';
 import { Container, Paper, Grid } from '@material-ui/core';
 
-import { PlayerProvider } from '../components/PlayerContext';
-import ChordGrid from '../components/ChordGrid';
-import Timeline from '../components/Timeline';
-import { Song } from '../lib/types';
+import { PlayerProvider } from '../src/components/PlayerContext';
+import ChordGrid from '../src/components/ChordGrid';
+import Timeline from '../src/components/Timeline';
+import { Song } from '../src/types';
 
 const song: Song = {
   measures: [

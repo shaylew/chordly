@@ -1,7 +1,7 @@
 import { Theme, createMuiTheme } from '@material-ui/core/';
 import * as MuiColors from '@material-ui/core/colors';
 
-import { PitchClass } from './types';
+import { PitchClass } from '../types';
 import defaultTheme from './theme';
 
 function mkTheme(color: string): Theme {

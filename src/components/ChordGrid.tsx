@@ -1,8 +1,8 @@
 import React from 'react';
 import { Grid } from '@material-ui/core/';
 
-import { PitchClass } from '../lib/types';
-import { ChordButton } from './ChordButton';
+import { PitchClass } from '../types';
+import { ChordPlayButton } from './ChordPlayButton';
 
 export type EmphasisLevel = 'high' | 'medium' | 'low';
 
@@ -28,7 +28,7 @@ export const ChordGrid: React.FC<ChordGridProps> = () => {
               const chord = { root: pc, intervals, symbol };
               return (
                 <Grid item key={pc} xs={1}>
-                  <ChordButton chord={chord} />
+                  <ChordPlayButton chord={chord} />
                 </Grid>
               );
             })}

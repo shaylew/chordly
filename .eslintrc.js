@@ -27,6 +27,14 @@ module.exports = {
       files: ['**/*.tsx'],
       rules: {
         'react/prop-types': 'off',
+        '@typescript-eslint/no-unused-vars': [
+          'warn',
+          { varsIgnorePattern: '^_' },
+        ],
+        '@typescript-eslint/explicit-function-return-type': [
+          'warn',
+          { allowExpressions: true },
+        ],
       },
     },
   ],

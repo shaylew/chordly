@@ -1,9 +1,9 @@
 import React from 'react';
-import { Grid, Paper, ButtonBase } from '@material-ui/core';
+import { Grid, ButtonBase, LinearProgress } from '@material-ui/core';
 import * as Tone from 'tone';
 
-import { Song, Measure } from '../lib/types';
-import { ChordButton } from './ChordButton';
+import { Song, Measure } from '../types';
+import { ChordPlayButton } from './ChordPlayButton';
 import usePlayer from './PlayerContext';
 
 export type TimelineProps = {
@@ -15,7 +15,7 @@ const Bar: React.FC<{ measure: Measure }> = props => {
 
   return (
     <ButtonBase component="div" style={{ width: '100%' }}>
-      <ChordButton chord={measure.chord} />
+      <ChordPlayButton chord={measure.chord} />
     </ButtonBase>
   );
 };
@@ -24,7 +24,7 @@ export const Timeline: React.FC<TimelineProps> = props => {
   const { song } = props;
   const player = usePlayer();
 
-  const play = () => {
+  const play = (): void => {
     if (player) {
       player.scheduleSong(song);
       Tone.Transport.start();
@@ -32,18 +32,21 @@ export const Timeline: React.FC<TimelineProps> = props => {
   };
 
   return (
-    <div>
-      <div>
+    <Grid container spacing={2}>
+      <Grid item xs={12}>
         <button onClick={play}>play!</button>
-      </div>
-      <Grid container spacing={2}>
+      </Grid>
+      <Grid item xs={12}>
+        <LinearProgress value={10} variant="determinate" />
+      </Grid>
+      <Grid item container spacing={2}>
         {song.measures.map((measure, i) => (
           <Grid item xs={3} key={i}>
             <Bar measure={measure} />
           </Grid>
         ))}
       </Grid>
-    </div>
+    </Grid>
   );
 };
 
