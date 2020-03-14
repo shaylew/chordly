@@ -1,38 +1,32 @@
 import React from 'react';
+import { Button, ThemeProvider, withStyles } from '@material-ui/core';
 
 import { PitchClass } from '../lib/types';
-import { chromaticColor as noteColor } from '../lib/colors';
+import { noteTheme } from '../lib/colors';
 
 export type ChordButtonProps = {
   label: string;
   root: PitchClass;
   onClick?: () => void;
+  onMouseDown?: () => void;
+  onMouseUp?: () => void;
 };
 
+const StyledButton = withStyles({
+  root: {
+    width: '100%',
+  },
+})(Button);
+
 export const ChordButton: React.FC<ChordButtonProps> = props => {
-  const { label, root, onClick } = props;
-  const color = noteColor(root);
+  const { label, root, ...handlers } = props;
+  const theme = noteTheme(root);
 
   return (
-    <button onClick={onClick}>
-      {label}
-      <style jsx>{`
-        button {
-          color: black;
-          background-color: ${color};
-        }
-      `}</style>
-      <style jsx>{`
-        button {
-          flex-grow: 1;
-          padding: 1em;
-          margin: 0.25em;
-          border-radius: 0.5em;
-          text-decoration: none;
-          border: none;
-          font-weight: bold;
-        }
-      `}</style>
-    </button>
+    <ThemeProvider theme={theme}>
+      <StyledButton variant="contained" color="secondary" {...handlers}>
+        {label}
+      </StyledButton>
+    </ThemeProvider>
   );
 };

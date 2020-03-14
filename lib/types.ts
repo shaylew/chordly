@@ -35,7 +35,19 @@ namesFlat.forEach((name, i) => {
   pitchClassOf[name] = i as PitchClass;
 });
 
-export function toNote(pc: PitchClass, octave: Octave = 5): Note {
+export function noteName(
+  pc: PitchClass,
+  options?: {
+    pretty?: boolean;
+    key?: 'sharp' | 'flat';
+  },
+): string {
+  const { pretty = true, key = 'flat' } = options || {};
+  const base = (key === 'sharp' ? namesSharp : namesFlat)[pc];
+  return !pretty ? base : base.replace('s', '♯').replace('b', '♭');
+}
+
+export function toNote(pc: PitchClass, octave: Octave = 4): Note {
   return `${namesSharp[pc]}${octave}` as Note;
 }
 
@@ -50,11 +62,6 @@ export function createSynth(): Tone.PolySynth {
   return new Tone.PolySynth({
     maxPolyphony: 8,
     voice: Tone.Synth,
-    options: {
-      oscillator: {
-        type: 'fatsine',
-        spread: 10,
-      },
-    },
+    options: {},
   }).toDestination();
 }
