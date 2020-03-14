@@ -6,10 +6,20 @@ export type Interval = number;
 export type Chord = {
   root: PitchClass;
   intervals: Interval[];
+  symbol?: string;
 };
 
 export type Note = Tone.Unit.Note;
 export type Synth = Tone.PolySynth;
+export type Time = string | number | Tone.Unit.TimeObject;
+
+export type Song = { bpm?: number; measures: Measure[] };
+export type Measure = { chord: Chord };
+
+export type NotationOptions = {
+  pretty?: boolean;
+  key?: 'sharp' | 'flat';
+};
 
 // prettier-ignore
 export type NoteName =
@@ -35,16 +45,14 @@ namesFlat.forEach((name, i) => {
   pitchClassOf[name] = i as PitchClass;
 });
 
-export function noteName(
-  pc: PitchClass,
-  options?: {
-    pretty?: boolean;
-    key?: 'sharp' | 'flat';
-  },
-): string {
+export function noteName(pc: PitchClass, options?: NotationOptions): string {
   const { pretty = true, key = 'flat' } = options || {};
   const base = (key === 'sharp' ? namesSharp : namesFlat)[pc];
   return !pretty ? base : base.replace('s', '♯').replace('b', '♭');
+}
+
+export function chordName(chord: Chord, options?: NotationOptions): string {
+  return noteName(chord.root, options) + (chord.symbol || '');
 }
 
 export function toNote(pc: PitchClass, octave: Octave = 4): Note {
@@ -56,12 +64,4 @@ export function toNotes(chord: Chord): Note[] {
   return Tone.Frequency(toNote(root))
     .harmonize(intervals)
     .map(f => f.toNote());
-}
-
-export function createSynth(): Tone.PolySynth {
-  return new Tone.PolySynth({
-    maxPolyphony: 8,
-    voice: Tone.Synth,
-    options: {},
-  }).toDestination();
 }

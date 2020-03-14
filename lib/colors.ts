@@ -1,4 +1,4 @@
-import { Color, Theme, createMuiTheme } from '@material-ui/core/';
+import { Theme, createMuiTheme } from '@material-ui/core/';
 import * as MuiColors from '@material-ui/core/colors';
 
 import { PitchClass } from './types';
@@ -19,25 +19,27 @@ function mkTheme(color: string): Theme {
   });
 }
 
-/*
+/* */
+const w = 700;
 export const themes = [
-  mkTheme(MuiColors.yellow),
-  mkTheme(MuiColors.amber),
-  mkTheme(MuiColors.orange),
+  mkTheme(MuiColors.yellow[w]),
+  mkTheme(MuiColors.amber[w]),
+  mkTheme(MuiColors.orange[w]),
   // mkTheme(MuiColors.deepOrange),
-  mkTheme(MuiColors.red),
-  mkTheme(MuiColors.pink),
-  mkTheme(MuiColors.purple),
+  mkTheme(MuiColors.red[w]),
+  mkTheme(MuiColors.pink[w]),
+  mkTheme(MuiColors.purple[w]),
   // mkTheme(MuiColors.deepPurple),
-  mkTheme(MuiColors.indigo),
-  mkTheme(MuiColors.blue),
+  mkTheme(MuiColors.indigo[w]),
+  mkTheme(MuiColors.blue[w]),
   //mkTheme(MuiColors.lightBlue),
-  mkTheme(MuiColors.cyan),
-  mkTheme(MuiColors.teal),
-  mkTheme(MuiColors.green),
+  mkTheme(MuiColors.cyan[w]),
+  mkTheme(MuiColors.teal[w]),
+  mkTheme(MuiColors.green[w]),
   // mkTheme(MuiColors.lightGreen),
-  mkTheme(MuiColors.lime),
-];*/
+  mkTheme(MuiColors.lime[w]),
+];
+/* */
 
 export const colors: string[] = [
   '#ffdf00', // yellow
@@ -54,7 +56,7 @@ export const colors: string[] = [
   '#b0ed11', // lime
 ];
 
-export const themes = colors.map(mkTheme);
+// export const themes = colors.map(mkTheme);
 
 export function noteTheme(note: PitchClass): Theme {
   return themes[note];
