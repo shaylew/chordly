@@ -1,4 +1,4 @@
-import { Theme, createMuiTheme } from '@material-ui/core/';
+import { Theme, createMuiTheme, Color } from '@material-ui/core/';
 import * as MuiColors from '@material-ui/core/colors';
 
 import { PitchClass } from '../types';
@@ -19,57 +19,60 @@ function mkTheme(color: string): Theme {
   });
 }
 
-/* */
-const w = 700;
-export const themes = [
-  mkTheme(MuiColors.yellow[w]),
-  mkTheme(MuiColors.amber[w]),
-  mkTheme(MuiColors.orange[w]),
-  // mkTheme(MuiColors.deepOrange),
-  mkTheme(MuiColors.red[w]),
-  mkTheme(MuiColors.pink[w]),
-  mkTheme(MuiColors.purple[w]),
-  // mkTheme(MuiColors.deepPurple),
-  mkTheme(MuiColors.indigo[w]),
-  mkTheme(MuiColors.blue[w]),
+export const colors = [
+  MuiColors.yellow,
+  MuiColors.amber,
+  MuiColors.orange,
+  // (MuiColors.deepOrange),
+  MuiColors.red,
+  MuiColors.pink,
+  MuiColors.purple,
+  // (MuiColors.deepPurple),
+  MuiColors.indigo,
+  MuiColors.blue,
   //mkTheme(MuiColors.lightBlue),
-  mkTheme(MuiColors.cyan[w]),
-  mkTheme(MuiColors.teal[w]),
-  mkTheme(MuiColors.green[w]),
+  MuiColors.cyan,
+  MuiColors.teal,
+  MuiColors.green,
   // mkTheme(MuiColors.lightGreen),
-  mkTheme(MuiColors.lime[w]),
-];
-/* */
-
-export const colors: string[] = [
-  '#ffdf00', // yellow
-  '#ff9f00', // orange peel
-  '#fe3700', // vermilion
-  '#fd497f', // rose
-  '#fe74dd', // magenta
-  '#ac03ff', // purple
-  '#6103ff', // violet
-  '#0403ff', // blue
-  '#0374ff', // cornflower
-  '#03dbff', // arctic blue
-  '#00ef59', // spring green
-  '#b0ed11', // lime
+  MuiColors.lime,
 ];
 
-// export const themes = colors.map(mkTheme);
+export function noteColor(note: PitchClass): Color {
+  return colors[note];
+}
+
+export const themes = colors.map(c => mkTheme(c[700]));
 
 export function noteTheme(note: PitchClass): Theme {
   return themes[note];
 }
 
-export function noteColor(note: PitchClass): string {
-  return colors[note];
-}
+// export const altColors: string[] = [
+//   '#ffdf00', // yellow
+//   '#ff9f00', // orange peel
+//   '#fe3700', // vermilion
+//   '#fd497f', // rose
+//   '#fe74dd', // magenta
+//   '#ac03ff', // purple
+//   '#6103ff', // violet
+//   '#0403ff', // blue
+//   '#0374ff', // cornflower
+//   '#03dbff', // arctic blue
+//   '#00ef59', // spring green
+//   '#b0ed11', // lime
+// ];
 
-export function chromaticColor(note: PitchClass): string {
-  return colors[note];
-}
+// export const themes = colors.map(mkTheme);
 
-export function fifthsColor(note: PitchClass): string {
-  return colors[note % 2 === 0 ? note : (note + 6) % 12];
-}
+// export function noteColor(note: PitchClass): string {
+//   return colors[note];
+// }
+
+// export function chromaticColor(note: PitchClass): string {
+//   return colors[note];
+// }
+
+// export function fifthsColor(note: PitchClass): string {
+//   return colors[note % 2 === 0 ? note : (note + 6) % 12];
+// }

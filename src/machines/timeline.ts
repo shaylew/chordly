@@ -1,75 +1,149 @@
-import { Machine, MachineConfig, assign } from 'xstate';
-import { Song } from '../types';
+import {
+  Machine,
+  MachineConfig,
+  assign as baseAssign,
+  Assigner,
+  PropertyAssigner,
+  AssignAction,
+  EventObject,
+} from 'xstate';
+import { Song, Chord } from '../types';
 
-type TimelineEvent =
-  | { type: 'START_PLAYING' }
-  | { type: 'STOP_PLAYING' }
-  | { type: 'FINISHED_PLAYING' }
-  | { type: 'TOGGLE_REPEAT' }
-  | { type: 'SET_SONG'; value: Song };
-// | 'SELECT_MEASURE'
+export type TimelineEvent =
+  | { type: 'MEASURE.NEW' }
+  | { type: 'CLEAR_ALL' }
+  | { type: 'DESELECT' }
+  | { type: 'MEASURE.SELECT'; id: number }
+  | { type: 'MEASURE.DELETE'; id: number }
+  | { type: 'PICK_CHORD'; value: Chord };
 
 export interface TimelineContext {
+  selectedMeasure?: number;
   song: Song;
-  loop: boolean;
-  selectedMeasure: number | null;
 }
 
 export interface TimelineSchema {
   states: {
+    initializing: {};
     idle: {};
-    playing: {};
-    finished: {};
+    editing: {};
+    adding: {};
   };
 }
 
-export type TimelineStates = keyof TimelineSchema['states'];
+function setChordAtPosition(song: Song, position: number, chord: Chord): Song {
+  return {
+    ...song,
+    measures: song.measures.map((measure, i) => {
+      return i !== position ? measure : { chord };
+    }),
+  };
+}
+
+function addChordAtEnd(song: Song, chord: Chord): Song {
+  return {
+    ...song,
+    measures: [...song.measures, { chord }],
+  };
+}
+
+function deleteChordAtPosition(song: Song, position: number): Song {
+  return {
+    ...song,
+    measures: song.measures.filter((measure, i) => i !== position),
+  };
+}
+
+// Give me real sum types or give me death!
+//
+// Typescript can infer the event subtype if it already knows the context type,
+// but it can't infer both at once in our case. So we fix the context type and
+// leave just the event type to be inferred.
+function assign<E extends EventObject = TimelineEvent>(
+  arg: Assigner<TimelineContext, E> | PropertyAssigner<TimelineContext, E>,
+): AssignAction<TimelineContext, E> {
+  return baseAssign<TimelineContext, E>(arg);
+}
 
 export const timelineConfig: MachineConfig<
   TimelineContext,
   TimelineSchema,
   TimelineEvent
 > = {
-  initial: 'idle',
-
+  id: 'timeline',
+  initial: 'initializing',
   context: {
     song: { measures: [] },
-    loop: false,
-    selectedMeasure: null,
+    selectedMeasure: undefined,
   },
 
   on: {
-    TOGGLE_REPEAT: {
-      actions: [
-        assign({
-          loop: context => !context.loop,
-        }),
-      ],
+    CLEAR_ALL: {
+      actions: assign({
+        selectedMeasure: undefined,
+        song: { measures: [] },
+      }),
+      target: 'idle',
+    },
+    DESELECT: {
+      actions: assign({
+        selectedMeasure: undefined,
+      }),
+      target: 'idle',
+    },
+    'MEASURE.DELETE': {
+      actions: assign({
+        selectedMeasure: (context, event) =>
+          context.selectedMeasure === event.id
+            ? undefined
+            : context.selectedMeasure,
+        song: (context, event) => deleteChordAtPosition(context.song, event.id),
+      }),
+    },
+    'MEASURE.SELECT': {
+      actions: assign({
+        selectedMeasure: (_context, event) => event.id,
+      }),
+      target: 'editing',
+    },
+    'MEASURE.NEW': {
+      actions: assign({
+        selectedMeasure: undefined,
+      }),
+      target: 'adding',
     },
   },
 
   states: {
-    idle: {
+    initializing: {
       on: {
-        START_PLAYING: { target: 'playing' },
-        SET_SONG: {
+        // workaround -- services don't have an accurate state until the
+        // machine has transitioned at least once.
+        '': 'idle',
+      },
+    },
+    idle: {},
+    editing: {
+      on: {
+        PICK_CHORD: {
           actions: assign({
-            song: (_context, event) => event.value,
+            song: (context, event) =>
+              setChordAtPosition(
+                context.song,
+                context.selectedMeasure as number,
+                event.value,
+              ),
           }),
         },
       },
     },
-    playing: {
-      onEntry: 'startSong',
-      onExit: 'stopSong',
+    adding: {
       on: {
-        STOP_PLAYING: { target: 'idle' },
-        FINISHED_PLAYING: { target: 'finished' },
-      },
-    },
-    finished: {
-      after: {
-        1000: { target: 'idle' },
+        PICK_CHORD: {
+          actions: assign({
+            song: (context, event) => addChordAtEnd(context.song, event.value),
+          }),
+        },
       },
     },
   },

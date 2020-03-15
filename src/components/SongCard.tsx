@@ -1,47 +1,50 @@
 import React from 'react';
-import { useMachine } from '@xstate/react';
+import { Interpreter } from 'xstate';
+import { useService } from '@xstate/react';
+import * as Tone from 'tone';
 
 import { Card, CardContent, IconButton } from '@material-ui/core';
 import PlayIcon from '@material-ui/icons/PlayCircleFilled';
 import PauseIcon from '@material-ui/icons/PauseCircleFilled';
 import LoopIcon from '@material-ui/icons/Loop';
 
-import { Song } from '../types';
 import Timeline from './Timeline';
-import usePlayer from './PlayerContext';
-import timelineMachine from '../machines/timeline';
+import {
+  TimelineContext,
+  TimelineSchema,
+  TimelineEvent,
+} from '../machines/timeline';
+import { PlayerContext, PlayerSchema, PlayerEvent } from '../machines/player';
 
 export type SongCardProps = {
-  song: Song;
+  timelineMachine: Interpreter<TimelineContext, TimelineSchema, TimelineEvent>;
+  playerMachine: Interpreter<PlayerContext, PlayerSchema, PlayerEvent>;
 };
 
 export const SongCard: React.FC<SongCardProps> = props => {
-  const { song } = props;
-  const player = usePlayer();
+  const { timelineMachine, playerMachine } = props;
 
-  const [current, send] = useMachine(timelineMachine, {
-    actions: {
-      startSong: () => {
-        player?.setSong(song);
-        player?.startSong(() => send('FINISHED_PLAYING'));
-      },
-      stopSong: () => {
-        player?.stopSong();
-      },
-    },
-  });
+  const [pCurrent, pSend] = useService(playerMachine);
+  const [_tCurrent, tSend] = useService(timelineMachine);
 
-  player?.setLoop(current.context.loop);
+  const playing =
+    pCurrent !== undefined &&
+    (pCurrent.matches('playing') || pCurrent.matches('finished'));
+  const looping = pCurrent && pCurrent.context.loop;
 
-  const playing = current.value === 'playing' || current.value === 'finished';
+  const togglePlayback = (): void => {
+    // unfortunately if we let the machine do this the browser forgets
+    // that the action was user-initiated and prevents the sound.
+    Tone.start();
+    playing ? pSend('PLAYER.STOP') : pSend('PLAYER.START');
+    tSend('DESELECT');
+  };
+
+  const toggleLoop = (): void => {
+    pSend('PLAYER.TOOGLE_LOOP');
+  };
 
   const icon = !playing ? <PlayIcon /> : <PauseIcon />;
-  const togglePlayback = (): void => {
-    playing ? send('STOP_PLAYING') : send('START_PLAYING');
-  };
-  const toggleRepeat = (): void => {
-    send('TOGGLE_REPEAT');
-  };
 
   return (
     <Card raised>
@@ -51,14 +54,14 @@ export const SongCard: React.FC<SongCardProps> = props => {
         </IconButton>
         <IconButton
           aria-label="loop"
-          color={current.context.loop ? 'primary' : 'default'}
-          onClick={toggleRepeat}
+          color={looping ? 'primary' : 'default'}
+          onClick={toggleLoop}
         >
           <LoopIcon />
         </IconButton>
       </CardContent>
       <CardContent>
-        <Timeline song={song} playing={playing} />
+        <Timeline playing={playing} stateMachineRef={timelineMachine} />
       </CardContent>
     </Card>
   );

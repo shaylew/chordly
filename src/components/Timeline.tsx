@@ -1,17 +1,22 @@
 import React from 'react';
+import { Interpreter } from 'xstate';
+import { useService } from '@xstate/react';
 
 import { makeStyles } from '@material-ui/core/styles';
+import { ClickAwayListener } from '@material-ui/core';
 
-import { Song } from '../types';
+import {
+  TimelineEvent,
+  TimelineContext,
+  TimelineSchema,
+} from '../machines/timeline';
 import TimelineProgress from './TimelineProgress';
 import TimelineSlot from './TimelineSlot';
 
 export type TimelineProps = {
-  song: Song;
   playing?: boolean;
+  stateMachineRef: Interpreter<TimelineContext, TimelineSchema, TimelineEvent>;
 };
-
-const staffColor = 'rgba(0, 0, 0, 0.8)';
 
 const useStyles = makeStyles({
   root: {
@@ -19,41 +24,42 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'stretch',
-    borderTop: `solid 2px ${staffColor}`,
-    borderBottom: `solid 2px ${staffColor}`,
   },
-  staffStart: {
-    content: '""',
-    position: 'relative',
-    zIndex: 1,
-    display: 'block',
-    flexBasis: 10,
-    borderLeft: `solid 6px ${staffColor}`,
-    borderRight: `solid 2px ${staffColor}`,
-  },
-  staffEnd: {
-    content: '""',
-    position: 'relative',
-    zIndex: 1,
-    display: 'block',
-    flexBasis: 10,
-    borderLeft: `solid 2px ${staffColor}`,
-    borderRight: `solid 6px ${staffColor}`,
+  slotWrapper: {
+    flexGrow: 1,
+    padding: '0.5em',
   },
 });
 
 export const Timeline: React.FC<TimelineProps> = props => {
-  const { song, playing } = props;
+  const { playing, stateMachineRef } = props;
   const classes = useStyles();
+
+  const [current, send] = useService(stateMachineRef);
+  const state = current || stateMachineRef.initialState;
+
+  const { song, selectedMeasure } = state.context;
 
   return (
     <div className={classes.root}>
       <TimelineProgress totalBars={4} playing={playing} />
-      <div className={classes.staffStart} />
-      {song.measures.map((measure, i) => (
-        <TimelineSlot key={i} measure={measure} />
-      ))}
-      <div className={classes.staffEnd} />
+      {song.measures.map((measure, i) => {
+        const selected = i === selectedMeasure;
+        return (
+          <ClickAwayListener
+            key={i}
+            onClickAway={() => selected && send('DESELECT')}
+          >
+            <div className={classes.slotWrapper}>
+              <TimelineSlot
+                measure={measure}
+                selected={selected}
+                onClick={() => send({ type: 'MEASURE.SELECT', id: i })}
+              />
+            </div>
+          </ClickAwayListener>
+        );
+      })}
     </div>
   );
 };
