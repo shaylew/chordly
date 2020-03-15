@@ -11,6 +11,7 @@ export type ChordButtonProps = {
 const StyledButton = withStyles({
   root: {
     width: '100%',
+    flex: '0 1 6em',
   },
 })(Button);
 

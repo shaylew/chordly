@@ -4,7 +4,7 @@ import { Container, Paper, Grid } from '@material-ui/core';
 
 import { PlayerProvider } from '../src/components/PlayerContext';
 import ChordGrid from '../src/components/ChordGrid';
-import Timeline from '../src/components/Timeline';
+import SongCard from '../src/components/SongCard';
 import { Song } from '../src/types';
 
 const song: Song = {
@@ -24,13 +24,11 @@ const Index: NextPage<{}> = () => {
           <Grid container spacing={4}>
             <Grid item xs={12}>
               <Paper elevation={2}>
-                <Timeline song={song} />
+                <SongCard song={song} />
               </Paper>
             </Grid>
             <Grid item xs={12}>
-              <Paper elevation={2}>
-                <ChordGrid />
-              </Paper>
+              <ChordGrid />
             </Grid>
           </Grid>
         </Container>

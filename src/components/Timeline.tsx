@@ -1,52 +1,60 @@
 import React from 'react';
-import { Grid, ButtonBase, LinearProgress } from '@material-ui/core';
-import * as Tone from 'tone';
 
-import { Song, Measure } from '../types';
-import { ChordPlayButton } from './ChordPlayButton';
-import usePlayer from './PlayerContext';
+import { makeStyles } from '@material-ui/core/styles';
+
+import { Song } from '../types';
+import TimelineProgress from './TimelineProgress';
+import TimelineSlot from './TimelineSlot';
 
 export type TimelineProps = {
   song: Song;
+  playing?: boolean;
 };
 
-const Bar: React.FC<{ measure: Measure }> = props => {
-  const { measure } = props;
+const staffColor = 'rgba(0, 0, 0, 0.8)';
 
-  return (
-    <ButtonBase component="div" style={{ width: '100%' }}>
-      <ChordPlayButton chord={measure.chord} />
-    </ButtonBase>
-  );
-};
+const useStyles = makeStyles({
+  root: {
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    borderTop: `solid 2px ${staffColor}`,
+    borderBottom: `solid 2px ${staffColor}`,
+  },
+  staffStart: {
+    content: '""',
+    position: 'relative',
+    zIndex: 1,
+    display: 'block',
+    flexBasis: 10,
+    borderLeft: `solid 6px ${staffColor}`,
+    borderRight: `solid 2px ${staffColor}`,
+  },
+  staffEnd: {
+    content: '""',
+    position: 'relative',
+    zIndex: 1,
+    display: 'block',
+    flexBasis: 10,
+    borderLeft: `solid 2px ${staffColor}`,
+    borderRight: `solid 6px ${staffColor}`,
+  },
+});
 
 export const Timeline: React.FC<TimelineProps> = props => {
-  const { song } = props;
-  const player = usePlayer();
-
-  const play = (): void => {
-    if (player) {
-      player.scheduleSong(song);
-      Tone.Transport.start();
-    }
-  };
+  const { song, playing } = props;
+  const classes = useStyles();
 
   return (
-    <Grid container spacing={2}>
-      <Grid item xs={12}>
-        <button onClick={play}>play!</button>
-      </Grid>
-      <Grid item xs={12}>
-        <LinearProgress value={10} variant="determinate" />
-      </Grid>
-      <Grid item container spacing={2}>
-        {song.measures.map((measure, i) => (
-          <Grid item xs={3} key={i}>
-            <Bar measure={measure} />
-          </Grid>
-        ))}
-      </Grid>
-    </Grid>
+    <div className={classes.root}>
+      <TimelineProgress totalBars={4} playing={playing} />
+      <div className={classes.staffStart} />
+      {song.measures.map((measure, i) => (
+        <TimelineSlot key={i} measure={measure} />
+      ))}
+      <div className={classes.staffEnd} />
+    </div>
   );
 };
 

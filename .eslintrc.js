@@ -29,7 +29,10 @@ module.exports = {
         'react/prop-types': 'off',
         '@typescript-eslint/no-unused-vars': [
           'warn',
-          { varsIgnorePattern: '^_' },
+          {
+            varsIgnorePattern: '^_',
+            argsIgnorePattern: '^_',
+          },
         ],
         '@typescript-eslint/explicit-function-return-type': [
           'warn',

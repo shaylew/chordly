@@ -13,6 +13,7 @@ function mkSynth(voices: number): Synth {
 export class Player {
   public songSynth: Synth;
   public buttonSynth: Synth;
+  public song?: Song;
 
   constructor() {
     this.songSynth = mkSynth(8).sync();
@@ -44,7 +45,9 @@ export class Player {
     return this;
   }
 
-  scheduleSong(song: Song): void {
+  setSong(song: Song): void {
+    this.song = song;
+    Tone.Transport.stop();
     Tone.Transport.cancel();
     Tone.Transport.bpm.value = song.bpm || 120;
     Tone.Transport.position = 0;
@@ -52,6 +55,37 @@ export class Player {
       const chord = measure.chord;
       this.songSynth.triggerAttackRelease(toNotes(chord), '1m', `${i}m`);
     });
+  }
+
+  startSong(onFinish?: () => void): void {
+    if (!this.song) {
+      return;
+    }
+
+    if (onFinish) {
+      const songEnd = `${this.song.measures.length + 1}m`;
+      Tone.Transport.scheduleOnce(onFinish, songEnd);
+    }
+
+    Tone.Transport.start();
+  }
+
+  stopSong(): void {
+    this.songSynth.releaseAll();
+    Tone.Transport.stop();
+  }
+
+  setLoop(loop: boolean): void {
+    if (!this.song) {
+      return;
+    }
+
+    if (loop) {
+      const songEnd = `${this.song.measures.length}:0:1`;
+      Tone.Transport.setLoopPoints(0, songEnd);
+    }
+
+    Tone.Transport.loop = loop;
   }
 
   dispose(): void {
