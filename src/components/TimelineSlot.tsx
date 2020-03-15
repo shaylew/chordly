@@ -4,11 +4,12 @@ import clsx from 'clsx';
 import { makeStyles } from '@material-ui/core/styles';
 import { ButtonBase } from '@material-ui/core';
 
-import { Measure } from '../types';
+import { Measure, Key } from '../types';
 import ChordPlayButton from './ChordPlayButton';
 
 export type TimelineSlotProps = {
   measure: Measure | null;
+  keySignature?: Key;
   selected?: boolean;
   onClick?: () => void;
 };
@@ -55,7 +56,7 @@ const useStyles = makeStyles({
 const Empty: React.FC = () => <div>[ psyche ]</div>;
 
 export const TimelineSlot: React.FC<TimelineSlotProps> = props => {
-  const { measure, selected, onClick } = props;
+  const { measure, selected, keySignature, onClick } = props;
   const classes = useStyles();
 
   return (
@@ -64,7 +65,11 @@ export const TimelineSlot: React.FC<TimelineSlotProps> = props => {
       onClick={onClick}
     >
       <ButtonBase component="div" className={classes.behind}></ButtonBase>
-      {measure ? <ChordPlayButton chord={measure.chord} /> : <Empty />}
+      {measure ? (
+        <ChordPlayButton keySignature={keySignature} chord={measure.chord} />
+      ) : (
+        <Empty />
+      )}
     </div>
   );
 };

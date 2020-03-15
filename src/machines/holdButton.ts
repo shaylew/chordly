@@ -38,7 +38,7 @@ export const holdButtonConfig: MachineConfig<
       },
     },
     pressing: {
-      onEntry: 'pressEffect',
+      entry: 'pressEffect',
       on: {
         RELEASE: { target: 'releasingSlow' },
       },

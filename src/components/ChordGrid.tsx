@@ -1,22 +1,22 @@
 import React from 'react';
 import { Grid } from '@material-ui/core/';
 
-import { PitchClass, Chord } from '../types';
+import { PitchClass, Chord, Key } from '../types';
 import { ChordPlayButton } from './ChordPlayButton';
 
 export type EmphasisLevel = 'high' | 'medium' | 'low';
 
 export type ChordGridProps = {
   onChordClick?: (chord: Chord) => void;
-  emphasis?: Map<PitchClass, EmphasisLevel>;
+  keySignature?: Key;
 };
 
 export const ChordGrid: React.FC<ChordGridProps> = props => {
-  const { onChordClick } = props;
+  const { onChordClick, keySignature } = props;
   const pcs: PitchClass[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
   const flavors = [
-    { name: 'major', symbol: '', intervals: [0, 4, 7] },
-    { name: 'minor', symbol: 'm', intervals: [0, 3, 7] },
+    { name: 'major', symbol: '', intervals: [0, 4, 7, 12] },
+    { name: 'minor', symbol: 'm', intervals: [0, 3, 7, 12] },
   ];
 
   return (
@@ -29,7 +29,7 @@ export const ChordGrid: React.FC<ChordGridProps> = props => {
               const chord = { root: pc, intervals, symbol };
               return (
                 <Grid item key={pc} xs={1}>
-                  <ChordPlayButton chord={chord} onChordClick={onChordClick} />
+                  <ChordPlayButton {...{ chord, keySignature, onChordClick }} />
                 </Grid>
               );
             })}

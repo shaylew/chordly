@@ -1,7 +1,8 @@
 {
   "name": "chord",
   "version": "1.0.0",
-  "description": "",
+  "description": "interactive chord progression generator",
+  "repository": "https://github.com/shaylew/chordly",
   "main": "index.js",
   "scripts": {
     "dev": "next",
@@ -9,7 +10,7 @@
     "start": "next start"
   },
   "keywords": [],
-  "author": "",
+  "author": "Shay Lewis",
   "license": "ISC",
   "dependencies": {
     "@material-ui/core": "^4.9.5",

@@ -5,6 +5,7 @@ import { useService } from '@xstate/react';
 import { makeStyles } from '@material-ui/core/styles';
 import { ClickAwayListener } from '@material-ui/core';
 
+import { Key } from '../types';
 import {
   TimelineEvent,
   TimelineContext,
@@ -15,6 +16,7 @@ import TimelineSlot from './TimelineSlot';
 
 export type TimelineProps = {
   playing?: boolean;
+  keySignature?: Key;
   stateMachineRef: Interpreter<TimelineContext, TimelineSchema, TimelineEvent>;
 };
 
@@ -32,7 +34,7 @@ const useStyles = makeStyles({
 });
 
 export const Timeline: React.FC<TimelineProps> = props => {
-  const { playing, stateMachineRef } = props;
+  const { playing, stateMachineRef, keySignature } = props;
   const classes = useStyles();
 
   const [current, send] = useService(stateMachineRef);
@@ -52,6 +54,7 @@ export const Timeline: React.FC<TimelineProps> = props => {
           >
             <div className={classes.slotWrapper}>
               <TimelineSlot
+                keySignature={keySignature}
                 measure={measure}
                 selected={selected}
                 onClick={() => send({ type: 'MEASURE.SELECT', id: i })}

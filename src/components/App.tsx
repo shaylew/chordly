@@ -1,61 +1,106 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useMachine } from '@xstate/react';
+import * as Tone from 'tone';
 
 import { Grid, Paper } from '@material-ui/core';
 
-import { Song, Chord } from '../types';
+import { Song, Chord, toKey } from '../types';
 import ChordGrid from './ChordGrid';
 import SongCard from './SongCard';
 import usePlayer from './PlayerContext';
-import playerMachine from '../machines/player';
-import timelineMachine from '../machines/timeline';
+import { TimelineInterpreter } from '../machines/timeline';
+import appMachine from '../machines/app';
 
 const defaultSong: Song = {
+  bpm: 240,
   measures: [
-    { chord: { root: 2, intervals: [0, 3, 7], symbol: 'm' } },
-    { chord: { root: 5, intervals: [0, 4, 7] } },
-    { chord: { root: 7, intervals: [0, 4, 7] } },
+    { chord: { root: 2, intervals: [0, 3, 7, 12], symbol: 'm' } },
+    { chord: { root: 5, intervals: [0, 4, 7, 12] } },
+    { chord: { root: 7, intervals: [0, 4, 7, 12] } },
     { chord: { root: 0, intervals: [0, 4, 7, 12] } },
   ],
 };
 
+const cMajor = toKey({ root: 0, intervals: [0, 4, 7] });
+
 export const App: React.FC = () => {
   const player = usePlayer();
 
-  const [tCurrent, tSend, tInterpreter] = useMachine(timelineMachine, {
-    context: { song: defaultSong },
-  });
-
-  const [pCurrent, pSend, pInterpreter] = useMachine(playerMachine, {
+  const [current, send, interpreter] = useMachine(appMachine, {
+    context: {
+      keySignature: cMajor,
+    },
     actions: {
-      startSong: () => {
-        const song = tCurrent ? tCurrent.context.song : defaultSong;
+      startSong: context => {
+        if (!context || !context.timeline) return;
+        const song = context.timeline.state.context.song;
+        player?.setLoop(context.loop);
         player?.setSong(song);
-        player?.startSong(() => pSend('PLAYER.FINISH'));
+        player?.startSong(() => send('SONG.FINISH'));
       },
       stopSong: () => {
         player?.stopSong();
       },
     },
   });
-  player?.setLoop(pCurrent.context.loop);
+
+  useEffect(() => {
+    // interpreter.onEvent(e => console.log(e));
+    send({ type: 'SET_SONG', song: defaultSong });
+  }, [interpreter]);
+
+  const playing = current.matches('playing');
+  const looping = current && current.context.loop;
+  const keySignature = current.context.keySignature;
+
+  const timelineMachine = current.context.timeline as TimelineInterpreter;
 
   const onChordClick = (chord: Chord): void => {
-    tSend({ type: 'PICK_CHORD', value: chord });
+    send({ type: 'PICK_CHORD', chord });
   };
+
+  const onTogglePlay = (): void => {
+    // unfortunately if we let the machine do this the browser forgets
+    // that the action was user-initiated and prevents the sound.
+    Tone.start();
+    playing ? send('SONG.STOP') : send('SONG.START');
+  };
+
+  const onToggleLoop = (): void => {
+    send('LOOP.TOGGLE');
+  };
+
+  const onSelectKey = (): void => {
+    send('KEY_SELECT.START');
+  };
+
+  const onSelectKeyCancel = (): void => {
+    send('KEY_SELECT.CANCEL');
+  };
+
+  const isSelectingKey = current.matches('pickingKey');
 
   return (
     <Grid container spacing={4}>
       <Grid item xs={12}>
         <Paper elevation={2}>
           <SongCard
-            playerMachine={pInterpreter}
-            timelineMachine={tInterpreter}
+            {...{
+              playing,
+              looping,
+              keySignature,
+              onSelectKey,
+              onSelectKeyCancel,
+              isSelectingKey,
+              onTogglePlay,
+              onToggleLoop,
+              timelineMachine,
+            }}
           />
         </Paper>
       </Grid>
       <Grid item xs={12}>
-        <ChordGrid onChordClick={onChordClick} />
+        <ChordGrid onChordClick={onChordClick} keySignature={keySignature} />
       </Grid>
     </Grid>
   );

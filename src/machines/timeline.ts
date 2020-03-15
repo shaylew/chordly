@@ -6,6 +6,8 @@ import {
   PropertyAssigner,
   AssignAction,
   EventObject,
+  Interpreter,
+  sendParent,
 } from 'xstate';
 import { Song, Chord } from '../types';
 
@@ -15,7 +17,8 @@ export type TimelineEvent =
   | { type: 'DESELECT' }
   | { type: 'MEASURE.SELECT'; id: number }
   | { type: 'MEASURE.DELETE'; id: number }
-  | { type: 'PICK_CHORD'; value: Chord };
+  | { type: 'SET_SONG'; song: Song }
+  | { type: 'PICK_CHORD'; chord: Chord };
 
 export interface TimelineContext {
   selectedMeasure?: number;
@@ -28,8 +31,15 @@ export interface TimelineSchema {
     idle: {};
     editing: {};
     adding: {};
+    update: {};
   };
 }
+
+export type TimelineInterpreter = Interpreter<
+  TimelineContext,
+  TimelineSchema,
+  TimelineEvent
+>;
 
 function setChordAtPosition(song: Song, position: number, chord: Chord): Song {
   return {
@@ -83,13 +93,18 @@ export const timelineConfig: MachineConfig<
         selectedMeasure: undefined,
         song: { measures: [] },
       }),
-      target: 'idle',
+      target: 'update',
     },
     DESELECT: {
       actions: assign({
         selectedMeasure: undefined,
       }),
       target: 'idle',
+    },
+    SET_SONG: {
+      actions: assign({
+        song: (_context, event) => event.song,
+      }),
     },
     'MEASURE.DELETE': {
       actions: assign({
@@ -99,6 +114,7 @@ export const timelineConfig: MachineConfig<
             : context.selectedMeasure,
         song: (context, event) => deleteChordAtPosition(context.song, event.id),
       }),
+      target: 'update',
     },
     'MEASURE.SELECT': {
       actions: assign({
@@ -123,6 +139,12 @@ export const timelineConfig: MachineConfig<
       },
     },
     idle: {},
+    update: {
+      entry: context => sendParent({ type: 'SONG.CHANGE', song: context.song }),
+      on: {
+        '': 'idle',
+      },
+    },
     editing: {
       on: {
         PICK_CHORD: {
@@ -131,9 +153,10 @@ export const timelineConfig: MachineConfig<
               setChordAtPosition(
                 context.song,
                 context.selectedMeasure as number,
-                event.value,
+                event.chord,
               ),
           }),
+          target: 'update',
         },
       },
     },
@@ -141,8 +164,9 @@ export const timelineConfig: MachineConfig<
       on: {
         PICK_CHORD: {
           actions: assign({
-            song: (context, event) => addChordAtEnd(context.song, event.value),
+            song: (context, event) => addChordAtEnd(context.song, event.chord),
           }),
+          target: 'update',
         },
       },
     },

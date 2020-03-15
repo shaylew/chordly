@@ -16,7 +16,7 @@ export class Player {
   public song?: Song;
 
   constructor() {
-    this.songSynth = mkSynth(8).sync();
+    this.songSynth = mkSynth(16).sync();
     this.buttonSynth = mkSynth(16);
   }
 
@@ -47,14 +47,6 @@ export class Player {
 
   setSong(song: Song): void {
     this.song = song;
-    Tone.Transport.stop();
-    Tone.Transport.cancel();
-    Tone.Transport.bpm.value = song.bpm || 120;
-    Tone.Transport.position = 0;
-    song.measures.forEach((measure, i) => {
-      const chord = measure.chord;
-      this.songSynth.triggerAttackRelease(toNotes(chord), '1m', `${i}m`);
-    });
   }
 
   startSong(onFinish?: () => void): void {
@@ -62,17 +54,34 @@ export class Player {
       return;
     }
 
-    if (onFinish) {
-      const songEnd = `${this.song.measures.length + 1}m`;
-      Tone.Transport.scheduleOnce(onFinish, songEnd);
-    }
+    Tone.Transport.stop();
+    Tone.Transport.cancel();
+    Tone.Transport.bpm.value = this.song.bpm || 120;
+    Tone.Transport.position = 0;
+    this.songSynth.releaseAll();
+
+    this.song.measures.forEach((measure, i) => {
+      const chord = measure.chord;
+      this.songSynth.triggerAttackRelease(toNotes(chord), '1m', `${i}m`);
+    });
+
+    const songEnd = `${this.song.measures.length + 1}m`;
+    Tone.Transport.scheduleOnce(() => {
+      this.songSynth.releaseAll();
+      onFinish && onFinish();
+    }, songEnd);
 
     Tone.Transport.start();
   }
 
   stopSong(): void {
     this.songSynth.releaseAll();
-    Tone.Transport.stop();
+    // avoid a race condition where the synth doesn't release because
+    // the transport is already stopped. poorly.
+    setTimeout(() => {
+      Tone.Transport.cancel();
+      Tone.Transport.stop();
+    }, 100);
   }
 
   setLoop(loop: boolean): void {
