@@ -10,6 +10,7 @@ export type Chord = {
   root: PitchClass;
   intervals: Interval[];
   symbol?: string;
+  octave?: Octave;
 };
 
 export type Song = { bpm?: number; measures: Measure[] };
@@ -19,11 +20,6 @@ export type Key = {
   notes: PitchClass[];
   typeName: string;
   accidentals: Accidental;
-};
-
-export type NotationOptions = {
-  pretty?: boolean;
-  accidentals?: Accidental;
 };
 
 // re-exports from Tone
@@ -55,14 +51,20 @@ namesFlat.forEach((name, i) => {
   pitchClassOf[name] = i as PitchClass;
 });
 
-export function noteName(pc: PitchClass, options?: NotationOptions): string {
-  const { pretty = true, accidentals: key = 'flat' } = options || {};
-  const base = (key === 'sharp' ? namesSharp : namesFlat)[pc];
-  return !pretty ? base : base.replace('s', '♯').replace('b', '♭');
+export function interval(pc: PitchClass, interval: Interval): PitchClass {
+  return ((pc + interval) % 12) as PitchClass;
 }
 
-export function chordName(chord: Chord, options?: NotationOptions): string {
-  return noteName(chord.root, options) + (chord.symbol || '');
+export function noteName(
+  pc: PitchClass,
+  accidentals: Accidental = 'flat',
+): string {
+  const base = (accidentals === 'sharp' ? namesSharp : namesFlat)[pc];
+  return base.replace('#', '♯').replace('b', '♭');
+}
+
+export function chordName(chord: Chord, accidentals?: Accidental): string {
+  return noteName(chord.root, accidentals) + (chord.symbol || '');
 }
 
 export function toNote(pc: PitchClass, octave: Octave = 4): Note {
@@ -71,37 +73,38 @@ export function toNote(pc: PitchClass, octave: Octave = 4): Note {
 
 export function toNotes(chord: Chord): Note[] {
   const { root, intervals } = chord;
-  return Tone.Frequency(toNote(root))
+  return Tone.Frequency(toNote(root, chord.octave))
     .harmonize(intervals)
     .map(f => f.toNote());
 }
 
 const majorScale = [0, 2, 4, 5, 7, 9, 11];
-const minorScale = [0, 2, 3, 5, 7, 9, 11];
+const minorScale = [0, 2, 3, 5, 7, 8, 10];
 
 export function toKey(chord: Chord): Key | undefined {
   // quick and dirty and wrong -- just check for major third
   const root = chord.root;
-  const accidentals: Accidental =
-    namesFlat[root] === namesSharp[root] ? 'sharp' : 'flat';
+  const accidentals: Accidental = 'GDAEB'.includes(namesSharp[root])
+    ? 'sharp'
+    : 'flat';
   const most = { root, accidentals };
   if (chord.intervals.includes(4)) {
     return {
       ...most,
       typeName: 'major',
-      notes: majorScale.map(i => ((i + chord.root) % 12) as PitchClass),
+      notes: majorScale.map(i => interval(root, i)),
     };
   } else {
     return {
       ...most,
       typeName: 'minor',
-      notes: minorScale.map(i => ((i + chord.root) % 12) as PitchClass),
+      notes: minorScale.map(i => interval(root, i)),
     };
   }
 }
 
 export function keyToChord(key: Key): Chord {
-  const symbol = (key.root + key.notes[2]) % 12 === 4 ? '' : 'm';
+  const symbol = key.notes.includes(interval(key.root, 4)) ? '' : 'm';
   return {
     root: key.root,
     intervals: [0, key.notes[2], key.notes[4], 12],
@@ -111,4 +114,14 @@ export function keyToChord(key: Key): Chord {
 
 export function isInKey(pc: PitchClass, key: Key): boolean {
   return key.notes.includes(pc);
+}
+
+export function mkMajor(note: NoteName): Chord {
+  const root = pitchClassOf[note];
+  return { root, intervals: [0, 4, 7, 12] };
+}
+
+export function mkMinor(note: NoteName): Chord {
+  const root = pitchClassOf[note];
+  return { root, intervals: [0, 3, 7, 12], symbol: 'm' };
 }

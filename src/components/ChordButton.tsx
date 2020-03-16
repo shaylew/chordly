@@ -99,6 +99,10 @@ export const ChordButton: React.FC<ChordButtonProps> = props => {
 
   const inKey = !keySignature || isInKey(chord.root, keySignature);
   const keyColor = inKey ? 'white' : 'black';
+  const name = chordName(
+    chord,
+    keySignature ? keySignature.accidentals : 'flat',
+  );
 
   const color = noteColor(chord.root);
   const classes = useStyles({ color, keyColor });
@@ -106,7 +110,7 @@ export const ChordButton: React.FC<ChordButtonProps> = props => {
   return (
     <div className={classes.root} {...rest}>
       <ButtonBase component="div" className={classes.buttonBase} />
-      <div className={classes.content}>{chordName(chord)}</div>
+      <div className={classes.content}>{name}</div>
     </div>
   );
 };

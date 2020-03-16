@@ -64,7 +64,7 @@ export const TimelineProgress: React.FC<TimelineProgressProps> = props => {
     return () => {
       animation.ref && cancelAnimationFrame(animation.ref);
     };
-  }, []);
+  }, [totalBars]);
 
   return (
     <LinearProgress

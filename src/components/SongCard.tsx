@@ -12,7 +12,7 @@ import PlayIcon from '@material-ui/icons/PlayCircleFilled';
 import PauseIcon from '@material-ui/icons/PauseCircleOutline';
 import LoopIcon from '@material-ui/icons/Loop';
 
-import { Chord, Key } from '../types';
+import { Key } from '../types';
 import Timeline from './Timeline';
 import {
   TimelineContext,

@@ -41,10 +41,11 @@ export const Timeline: React.FC<TimelineProps> = props => {
   const state = current || stateMachineRef.initialState;
 
   const { song, selectedMeasure } = state.context;
+  const totalBars = song.measures.length;
 
   return (
     <div className={classes.root}>
-      <TimelineProgress totalBars={4} playing={playing} />
+      <TimelineProgress totalBars={totalBars} playing={playing} />
       {song.measures.map((measure, i) => {
         const selected = i === selectedMeasure;
         return (
