@@ -31,14 +31,14 @@ export const ChordPlayButton: React.FC<ChordPlayButtonProps> = props => {
       chord={chord}
       {...rest}
       onMouseDown={() => send('PRESS')}
+      onMouseUp={() => send('RELEASE')}
+      onMouseLeave={() => send('RELEASE')}
       onClick={() => {
         send('CLICK');
         if (onChordClick) {
           onChordClick(chord);
         }
       }}
-      onMouseUp={() => send('RELEASE')}
-      onMouseLeave={() => send('RELEASE')}
     />
   );
 };

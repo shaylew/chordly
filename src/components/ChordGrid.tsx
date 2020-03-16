@@ -1,7 +1,7 @@
 import React from 'react';
 import { Grid } from '@material-ui/core/';
 
-import { PitchClass, Chord, Key } from '../types';
+import { PitchClass, Chord, Key, Octave } from '../types';
 import { ChordPlayButton } from './ChordPlayButton';
 
 export type EmphasisLevel = 'high' | 'medium' | 'low';
@@ -18,6 +18,7 @@ export const ChordGrid: React.FC<ChordGridProps> = props => {
     { name: 'major', symbol: '', intervals: [0, 4, 7, 12] },
     { name: 'minor', symbol: 'm', intervals: [0, 3, 7, 12] },
   ];
+  const octaves: Octave[] = [3, 4];
 
   return (
     <Grid container spacing={2}>
@@ -25,14 +26,19 @@ export const ChordGrid: React.FC<ChordGridProps> = props => {
         <Grid item key={name} xs={12}>
           <h2>{name}</h2>
           <Grid container spacing={1}>
-            {pcs.map(pc => {
-              const chord = { root: pc, intervals, symbol };
-              return (
-                <Grid item key={pc} xs={1}>
-                  <ChordPlayButton {...{ chord, keySignature, onChordClick }} />
-                </Grid>
-              );
-            })}
+            {octaves.map(octave =>
+              pcs.map(root => {
+                const name = `${octave}${symbol}`;
+                const chord = { root, intervals, symbol, octave };
+                return (
+                  <Grid item key={`${root}${name}`} xs={1}>
+                    <ChordPlayButton
+                      {...{ chord, keySignature, onChordClick }}
+                    />
+                  </Grid>
+                );
+              }),
+            )}
           </Grid>
         </Grid>
       ))}
