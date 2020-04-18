@@ -1,8 +1,12 @@
 import * as Tone from 'tone';
 
-import { Time, Synth, Song, Chord, toNotes } from '../types';
+import { ToneTime, ToneSynth, Song, Chord } from '../types';
 
-function mkSynth(voices: number): Synth {
+function toNotes(chord: Chord): Array<string> {
+  return chord.voicing.map(n => n.toString());
+}
+
+function mkSynth(voices: number): ToneSynth {
   return new Tone.PolySynth({
     maxPolyphony: voices,
     voice: Tone.Synth,
@@ -11,8 +15,8 @@ function mkSynth(voices: number): Synth {
 }
 
 export class Player {
-  public songSynth: Synth;
-  public buttonSynth: Synth;
+  public songSynth: ToneSynth;
+  public buttonSynth: ToneSynth;
   public song?: Song;
 
   constructor() {
@@ -22,8 +26,8 @@ export class Player {
 
   triggerChord(
     chord: Chord,
-    duration: Time,
-    time?: Time,
+    duration: ToneTime,
+    time?: ToneTime,
     velocity?: number,
   ): this {
     this.buttonSynth.triggerAttackRelease(
@@ -35,12 +39,12 @@ export class Player {
     return this;
   }
 
-  triggerChordStart(chord: Chord, time?: Time, velocity?: number): this {
+  triggerChordStart(chord: Chord, time?: ToneTime, velocity?: number): this {
     this.buttonSynth.triggerAttack(toNotes(chord), time, velocity);
     return this;
   }
 
-  triggerChordEnd(chord: Chord, time?: Time): this {
+  triggerChordEnd(chord: Chord, time?: ToneTime): this {
     this.buttonSynth.triggerRelease(toNotes(chord), time);
     return this;
   }

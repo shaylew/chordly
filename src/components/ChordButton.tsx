@@ -1,7 +1,7 @@
 import React from 'react';
 import { makeStyles, Theme, Color, ButtonBase, fade } from '@material-ui/core';
 
-import { Chord, Key, chordName, isInKey } from '../types';
+import { Chord, Key } from '../types';
 import { noteColor } from '../lib/colors';
 
 export type ChordButtonProps = {
@@ -97,12 +97,9 @@ const useStyles = makeStyles<Theme, StyleProps, string>({
 export const ChordButton: React.FC<ChordButtonProps> = props => {
   const { chord, keySignature, ...rest } = props;
 
-  const inKey = !keySignature || isInKey(chord.root, keySignature);
+  const inKey = !keySignature || keySignature.includes(chord.root);
   const keyColor = inKey ? 'white' : 'black';
-  const name = chordName(
-    chord,
-    keySignature ? keySignature.accidentals : 'flat',
-  );
+  const name = chord.name(keySignature?.accidentals);
 
   const color = noteColor(chord.root);
   const classes = useStyles({ color, keyColor });
