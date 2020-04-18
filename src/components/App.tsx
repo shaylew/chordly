@@ -4,7 +4,7 @@ import * as Tone from 'tone';
 
 import { Grid, Paper } from '@material-ui/core';
 
-import { Song, Chord, toKey, mkMinor, mkMajor, Octave } from '../types';
+import { Song, Chord, Key } from '../types';
 import ChordGrid from './ChordGrid';
 import SongCard from './SongCard';
 import usePlayer from './PlayerContext';
@@ -14,14 +14,14 @@ import appMachine from '../machines/app';
 const defaultSong: Song = {
   bpm: 240,
   measures: [
-    mkMajor('A'),
-    mkMajor('E'),
-    mkMinor('F#'),
-    mkMinor('C#'),
-    mkMajor('D'),
-    { ...mkMajor('A'), octave: 3 as Octave },
-    mkMajor('D'),
-    mkMajor('E'),
+    Chord.major('A'),
+    Chord.major('E'),
+    Chord.minor('F#'),
+    Chord.minor('C#'),
+    Chord.major('D'),
+    Chord.major('A', { octave: 3 }),
+    Chord.major('D'),
+    Chord.major('E'),
   ].map(chord => ({ chord })),
 };
 
@@ -30,7 +30,7 @@ export const App: React.FC = () => {
 
   const [current, send, interpreter] = useMachine(appMachine, {
     context: {
-      keySignature: toKey(mkMajor('A')),
+      keySignature: Key.major('A'),
     },
     actions: {
       startSong: context => {
