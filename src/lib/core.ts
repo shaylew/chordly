@@ -3,7 +3,7 @@ import * as Tone from 'tone';
 import { ToneTime, ToneSynth, Song, Chord } from '../types';
 
 function toNotes(chord: Chord): Array<string> {
-  return chord.voicing.map(n => n.toString());
+  return chord.notes.map(n => n.toString());
 }
 
 function mkSynth(voices: number): ToneSynth {

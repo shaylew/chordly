@@ -32,6 +32,7 @@ module.exports = {
           {
             varsIgnorePattern: '^_',
             argsIgnorePattern: '^_',
+            ignoreRestSiblings: true,
           },
         ],
         '@typescript-eslint/explicit-function-return-type': [

@@ -1,8 +1,9 @@
-import { Theme, createMuiTheme, Color } from '@material-ui/core/';
+import { Theme, createMuiTheme, Color, makeStyles } from '@material-ui/core/';
 import * as MuiColors from '@material-ui/core/colors';
 
 import { PitchClass } from '../types';
 import defaultTheme from './theme';
+import { StyleRules, CSSProperties } from '@material-ui/core/styles/withStyles';
 
 function mkTheme(color: string): Theme {
   return createMuiTheme({
@@ -47,6 +48,16 @@ export const themes = colors.map(c => mkTheme(c[700]));
 export function noteTheme(note: PitchClass): Theme {
   return themes[note];
 }
+
+const colorStyles: StyleRules = {};
+colors.forEach((color, pc) => {
+  const style: CSSProperties = {};
+  Object.entries(color).forEach(([weight, c]) => {
+    style[`--note-color-${weight}`] = c;
+  });
+  colorStyles[`note-${pc}`] = style;
+});
+export const useNoteColors = makeStyles(colorStyles);
 
 // export const altColors: string[] = [
 //   '#ffdf00', // yellow

@@ -5,7 +5,8 @@ import * as Tone from 'tone';
 import { Grid, Paper } from '@material-ui/core';
 
 import { Song, Chord, Key } from '../types';
-import ChordGrid from './ChordGrid';
+// import ChordGrid from './ChordGrid';
+import Keyboard, { KeyboardController } from './Keyboard';
 import SongCard from './SongCard';
 import usePlayer from './PlayerContext';
 import { TimelineInterpreter } from '../machines/timeline';
@@ -102,7 +103,8 @@ export const App: React.FC = () => {
         </Paper>
       </Grid>
       <Grid item xs={12}>
-        <ChordGrid onChordClick={onChordClick} keySignature={keySignature} />
+        <KeyboardController />
+        {/* <ChordGrid onChordClick={onChordClick} keySignature={keySignature} /> */}
       </Grid>
     </Grid>
   );

@@ -17,7 +17,7 @@ export function transpose(pc: PitchClass, interval: Interval): PitchClass {
 export type NoteName =
   'C'|'C#'|'Db'|'D'|'D#'|'Eb'|'E'|'F'|'F#'|'Gb'|'G'|'G#'|'Ab'|'A'|'A#'|'Bb'|'B';
 
-export type PitchClassOrName = NoteName | PitchClass;
+export type PitchClassOrName = PitchClass | NoteName;
 
 // prettier-ignore
 export const namesSharp: NoteName[] =
@@ -28,6 +28,10 @@ export const namesFlat: NoteName[] =
 // prettier-ignore
 export const keyNames: NoteName[] =
   ['C', 'G', 'D', 'A', 'E', 'B', 'Gb', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
+
+// prettier-ignore
+export const pitchClasses: PitchClass[] =
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
 // prettier-ignore
 const _nameToPC: Record<NoteName, PitchClass> = {
@@ -101,35 +105,66 @@ export const intervalNames: IntervalName[] = [
   'ninth',
 ];
 
-export type IntervalInfo = { semitones: number | null; symbol: string };
+export const intervalTypes: IntervalType[] = [
+  'minor',
+  'major',
+  'diminished',
+  'perfect',
+  'augmented',
+];
 
-export const namedIntervals = {
+export type IntervalInfo = { semitones?: number; symbol: string };
+
+export const namedIntervals: Record<
+  IntervalName,
+  Record<'none', IntervalInfo> & Partial<Record<IntervalType, IntervalInfo>>
+> = {
   third: {
-    none: { semitones: null, symbol: 'sus' },
+    none: { symbol: 'sus' },
     minor: { semitones: 3, symbol: 'm' },
     major: { semitones: 4, symbol: '' },
   },
   fifth: {
-    none: { semitones: null, symbol: 'drop5' },
+    none: { symbol: 'drop5' },
     diminished: { semitones: 6, symbol: 'b5' },
     perfect: { semitones: 7, symbol: '' },
     augmented: { semitones: 8, symbol: '#5' },
   },
   seventh: {
-    none: { semitones: null, symbol: '' },
+    none: { symbol: '' },
+    diminished: { semitones: 9, symbol: 'bb7' },
     minor: { semitones: 10, symbol: 'b7' },
     major: { semitones: 11, symbol: '7' },
   },
   ninth: {
-    none: { semitones: null, symbol: '' },
+    none: { symbol: '' },
     minor: { semitones: 13, symbol: 'b9' },
     major: { semitones: 14, symbol: '9' },
   },
 };
 
+// Occasionally you just want less structure than this,
+// when you're not being generic over intervals.
+export const MINOR_THIRD = 3;
+export const MAJOR_THIRD = 4;
+export const FIFTH = 7;
+
 export type NamedIntervals = typeof namedIntervals;
 
 export type Quality<A extends keyof NamedIntervals> = keyof NamedIntervals[A];
+
+export function identifyInterval(
+  interval: Interval,
+  name: IntervalName,
+): IntervalType | undefined {
+  const section = namedIntervals[name];
+  for (const t of intervalTypes) {
+    if (section[t]?.semitones === interval) {
+      return t;
+    }
+  }
+}
+
 export type Extension = {
   seventh?: Quality<'seventh'>;
   ninth?: Quality<'ninth'>;
@@ -165,8 +200,8 @@ export class ChordType {
     const mutIntervals = [0];
 
     for (const k of intervalNames) {
-      const part = this.parts[k] as Quality<typeof k>;
-      this.info[k] = namedIntervals[k][part];
+      const part = this.parts[k];
+      this.info[k] = namedIntervals[k][part] || namedIntervals[k].none;
       const { semitones, symbol } = this.info[k];
       if (semitones) {
         this.length++;
@@ -175,6 +210,17 @@ export class ChordType {
       }
     }
     this.intervals = mutIntervals;
+  }
+
+  static names = {
+    major: new ChordType({ third: 'major', fifth: 'perfect' }),
+    minor: new ChordType({ third: 'minor', fifth: 'perfect' }),
+    diminished: new ChordType({ third: 'minor', fifth: 'diminished' }),
+    augmented: new ChordType({ third: 'major', fifth: 'augmented' }),
+  };
+
+  altered(parts: Partial<ChordParts>): ChordType {
+    return new ChordType({ ...this.parts, ...parts });
   }
 
   inversion(n: number): Array<Interval> {
@@ -188,22 +234,25 @@ export class ChordType {
     }
   }
 
-  static major(extension: Extension = {}): ChordType {
-    return new ChordType({ third: 'major', fifth: 'perfect', ...extension });
+  static named(name: ChordTypeName, extension?: Extension): ChordType {
+    const base = ChordType.names[name];
+    return extension ? base.altered(extension) : base;
   }
 
-  static minor(extension: Extension = {}): ChordType {
-    return new ChordType({ third: 'minor', fifth: 'perfect', ...extension });
+  static defineNamed(name: ChordTypeName) {
+    return function namedChord(extension?: Extension): ChordType {
+      return ChordType.named(name, extension);
+    };
   }
 
-  static augmented(extension: Extension = {}): ChordType {
-    return new ChordType({ third: 'major', fifth: 'augmented', ...extension });
-  }
-
-  static diminished(extension: Extension = {}): ChordType {
-    return new ChordType({ third: 'minor', fifth: 'diminished', ...extension });
-  }
+  static major = ChordType.defineNamed('major');
+  static minor = ChordType.defineNamed('minor');
+  static diminished = ChordType.defineNamed('diminished');
+  static augmented = ChordType.defineNamed('augmented');
 }
+
+export type ChordTypeName = keyof typeof ChordType.names;
+export type ChordTypeOrName = ChordType | ChordTypeName;
 
 export class Key {
   readonly tonic: PitchClass;
@@ -236,8 +285,12 @@ export class Key {
     return Key.fromScale('minor', tonic, [0, 2, 3, 5, 7, 9, 11], accidentals);
   }
 
-  includes(pc: PitchClassOrName): boolean {
-    return this.notes.includes(toPitchClass(pc));
+  includes(element: PitchClassOrName | Chord): boolean {
+    if (typeof element === 'object') {
+      return element.pitches.every(pc => this.notes.includes(pc));
+    } else {
+      return this.notes.includes(toPitchClass(element));
+    }
   }
 }
 
@@ -248,42 +301,58 @@ export type Voicing = {
 
 export class Chord {
   readonly root: PitchClass;
-  readonly inversion: number;
-  readonly octave: Octave;
+  readonly voicing: Voicing;
+  readonly type: ChordType;
 
   readonly pitches: Array<PitchClass>;
   readonly rootNote: Note;
-  readonly voicing: Array<Note>;
+  readonly notes: Array<Note>;
 
   constructor(
     root: PitchClassOrName,
-    readonly type: ChordType,
+    type: ChordType | ChordTypeName,
     voicing?: Partial<Voicing>,
   ) {
     this.root = toPitchClass(root);
-    this.inversion = voicing?.inversion || 0;
-    this.octave = voicing?.octave || 4;
+    this.voicing = { inversion: 0, octave: 4, ...voicing };
+    this.type = typeof type === 'object' ? type : ChordType.named(type);
 
-    const intervals = this.type.inversion(this.inversion);
+    const intervals = this.type.inversion(this.voicing.inversion);
     this.pitches = intervals.map(interval => transpose(this.root, interval));
-    this.rootNote = new Note(this.root, this.octave);
-    this.voicing = intervals.map(interval => this.rootNote.transpose(interval));
+    this.rootNote = new Note(this.root, this.voicing.octave);
+
+    const voicedIntervals = this.type.inversion(this.voicing.inversion);
+    this.notes = voicedIntervals.map(i => this.rootNote.transpose(i));
   }
 
   name(accidental: Accidental = 'flat'): string {
     const letter = pcToName(this.root, accidental);
     const symbol = this.type.symbol;
-    const intervals = this.type.inversion(this.inversion);
+    const intervals = this.type.inversion(this.voicing.inversion);
     const base = transpose(this.root, intervals[0]);
     const slash = base === this.root ? '' : '/' + pcToName(base, accidental);
     return `${letter}${symbol}${slash}`;
   }
 
-  static major(root: PitchClassOrName, voicing?: Partial<Voicing>): Chord {
-    return new Chord(root, ChordType.major(), voicing);
+  includes(pc: PitchClassOrName): boolean {
+    return this.pitches.includes(toPitchClass(pc));
   }
 
-  static minor(root: PitchClassOrName, voicing?: Partial<Voicing>): Chord {
-    return new Chord(root, ChordType.minor(), voicing);
+  altered(parts: Partial<ChordParts>): Chord {
+    return new Chord(this.root, this.type.altered(parts), this.voicing);
   }
+
+  static defineNamed(name: ChordTypeName) {
+    return function namedChord(
+      root: PitchClassOrName,
+      voicing?: Partial<Voicing>,
+    ): Chord {
+      return new Chord(root, name, voicing);
+    };
+  }
+
+  static major = Chord.defineNamed('major');
+  static minor = Chord.defineNamed('minor');
+  static diminished = Chord.defineNamed('diminished');
+  static augmented = Chord.defineNamed('augmented');
 }
