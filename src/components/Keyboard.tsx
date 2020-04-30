@@ -1,15 +1,6 @@
 import React, { useState } from 'react';
 import clsx from 'clsx';
-import {
-  Theme,
-  Button,
-  Color,
-  ButtonBase,
-  makeStyles,
-  withStyles,
-  createStyles,
-  WithStyles,
-} from '@material-ui/core';
+import { ButtonBase, makeStyles } from '@material-ui/core';
 
 import { useNoteColors } from '../lib/colors';
 import {
@@ -30,9 +21,7 @@ import {
   HexGridRow,
   HexGridItem,
   HexGridSpacer,
-  Hexagon,
-  Circle,
-  ShapeClasses,
+  Shape,
 } from './HexGrid';
 
 export type NoteKeyProps = {
@@ -50,52 +39,34 @@ const translucentTime = scaleTime / 2;
 const collapsedSize = 0.4;
 const standardTransition = `transform ${scaleTime}s ease-out, opacity ${translucentTime}s ease-out`;
 
-const useDotStyles = makeStyles({
-  expanded: {},
-  ghost: {},
-  collapsed: {
-    '&$root': {
+const useKeyStyles = makeStyles({
+  expanded: {
+    '& $circle': {
+      opacity: 0,
+    },
+    '& $content': {
       opacity: 1,
     },
-  },
-  resonating: {},
-  isRoot: {},
-  inKey: {},
-  root: {
-    pointerEvents: 'none',
-    position: 'absolute',
-    left: 0,
-    opacity: 0,
-    transform: `scale(${collapsedSize})`,
-    transition: standardTransition,
-  },
-  shape: {
-    fill: 'none',
-    stroke: 'none',
-    '$inKey &': {
-      fill: '#E0E0E0',
+    '& $hexagon': {
+      opacity: 0.1,
     },
-    '$resonating &': {
-      fill: 'var(--note-color-100)',
+    '&:not($selected):hover $hexagon': {
+      opacity: 0.75,
     },
   },
-  hover: {
-    display: 'none',
-  },
-});
-
-const useHexStyles = makeStyles({
-  expanded: {},
   ghost: {
-    '&:not($selected) $shapeSvg': {
-      opacity: 0.5,
+    '&:not($selected) $hexagon': {
+      opacity: 0,
     },
     '&:not($selected):hover $content': {
-      opacity: 0.5,
+      opacity: 0.4,
+    },
+    '&:not($selected):hover $hexagon': {
+      opacity: 0.4,
     },
   },
   collapsed: {
-    '& $shapeSvg': {
+    '& $hexagon, & $hexagonOverlay': {
       opacity: 0,
       transform: `scale(${collapsedSize})`,
     },
@@ -104,71 +75,62 @@ const useHexStyles = makeStyles({
       pointerEvents: 'none',
     },
   },
-  inKey: {
-    '& $content': {
-      opacity: 1,
-    },
-    '& $shape': {
-      fill: '#E8E8E8',
-    },
-  },
   selected: {
     '& $content': {
       opacity: 1,
     },
-    '& $hover': {
+    '& $hexagonOverlay': {
       opacity: 1,
       strokeWidth: '8px',
-      fill: 'var(--note-color-200)', //(props: { color: Color }) => props.color[200],
       stroke: 'var(--note-color-700)', //(props: { color: Color }) => props.color[700],
     },
   },
-  resonating: {
-    '& $content': {
-      opacity: 1,
+  inKey: {
+    '&$collapsed $circle': {
+      opacity: 0.66,
     },
-    '&:not($selected) $shape': {
-      fill: 'var(--note-color-100)', //(props: { color: Color }) => props.color[100],
+  },
+  resonating: {
+    '& $circle': {
+      opacity: 0.66,
+      fill: 'var(--note-color-200)',
     },
   },
   isRoot: {
-    '&::after': {
-      content: '""',
-      display: 'block',
-      width: '100%',
-      position: 'absolute',
-      top: 'calc(100% + 3px)',
-      opacity: 0,
-      transition: standardTransition,
-      borderTop: `solid var(--note-color-700) 12px`, //(props: { color: Color }) => `solid ${props.color[700]} 12px`,
+    '& $hexagon': {
+      opacity: 0.5,
     },
-    '&$selected::after': {
-      opacity: 1,
+    '& $circle': {
+      transform: 'scale(0.66)',
+      fill: 'var(--note-color-200)',
     },
   },
   shapeSvg: {
-    transformOrigin: 'center',
-    transition: standardTransition,
     zIndex: 10,
   },
   root: {
     display: 'block',
   },
-  shape: {
+  hexagon: {
+    transition: standardTransition,
     strokeWidth: '4px',
     fill: 'none',
-    stroke: 'rgba(0, 0, 0, 0.25)',
+    stroke: 'rgba(0, 0, 0, 1)',
   },
-  hover: {
+  hexagonOverlay: {
     transition: standardTransition,
     opacity: 0,
-    '$root:not($collapsed):hover &': {
-      opacity: 1,
-    },
-    '$root:not($selected) &': {
-      strokeWidth: '4px',
-      stroke: '#888',
-    },
+    fill: 'var(--note-color-200)', //(props: { color: Color }) => props.color[200],
+  },
+  circle: {
+    fill: '#E0E0E0',
+    stroke: 'none',
+    opacity: 0,
+    transform: `scale(${collapsedSize})`,
+    transition: standardTransition,
+  },
+  circleOverlay: {
+    display: 'none',
   },
   content: {
     pointerEvents: 'auto',
@@ -195,51 +157,40 @@ const NoteKey: React.FC<NoteKeyProps> = props => {
   } = props;
 
   const colors = useNoteColors();
-  const dot = useDotStyles();
-  const hex = useHexStyles();
+  const classes = useKeyStyles();
 
   const colorClass = colors[`note-${pitchClass}`];
-  const dotClasses = {
-    root: clsx(colorClass, dot.root, {
-      [dot.root]: true,
-      [dot.collapsed]: showAs === 'collapsed',
-      [dot.expanded]: showAs === 'expanded',
-      [dot.ghost]: showAs === 'ghost',
-      [dot.inKey]: inKey,
-      [dot.resonating]: resonating,
+  const shapeClasses = {
+    root: clsx(colorClass, classes.root, {
+      [classes.expanded]: showAs === 'expanded',
+      [classes.collapsed]: showAs === 'collapsed',
+      [classes.ghost]: showAs === 'ghost',
+      [classes.selected]: selected,
+      [classes.isRoot]: root,
+      [classes.inKey]: inKey,
+      [classes.resonating]: resonating,
     }),
-    shape: dot.shape,
-    hover: dot.hover,
-  };
-  const hexClasses = {
-    root: clsx(colorClass, hex.root, {
-      [hex.expanded]: showAs === 'expanded',
-      [hex.collapsed]: showAs === 'collapsed',
-      [hex.ghost]: showAs === 'ghost',
-      [hex.selected]: selected,
-      [hex.isRoot]: root,
-      [hex.inKey]: inKey,
-      [hex.resonating]: resonating,
-    }),
-    shape: hex.shape,
-    hover: hex.hover,
-    content: hex.content,
-    shapeSvg: hex.shapeSvg,
+    hexagon: classes.hexagon,
+    hexagonOverlay: classes.hexagonOverlay,
+    circle: classes.circle,
+    circleOverlay: classes.circleOverlay,
+    content: classes.content,
+    shapeSvg: classes.shapeSvg,
   };
 
   return (
     <HexGridItem width="calc(100% - 4px)">
-      <Circle classes={dotClasses} />
-      <Hexagon classes={hexClasses}>
-        <ButtonBase classes={{ root: hex.buttonBase }} onClick={props.onClick}>
+      <Shape classes={shapeClasses}>
+        <ButtonBase
+          classes={{ root: classes.buttonBase }}
+          onClick={props.onClick}
+        >
           {pcToName(pitchClass)}
         </ButtonBase>
-      </Hexagon>
+      </Shape>
     </HexGridItem>
   );
 };
-
-// export const NoteKey = withStyles(keyStyles)(NoteKeyRaw);
 
 export type KeyboardKeyProps = KeyboardProps & {
   pitchClass: PitchClass;
@@ -267,11 +218,10 @@ export const KeyboardKey: React.FC<KeyboardKeyProps> = props => {
       keyProps.selected = false;
       keyProps.showAs = 'collapsed';
     } else {
-      const levelName = intervalNames[level - 1];
-      const allowed = Object.values(namedIntervals[levelName])
+      const allowed = Object.values(namedIntervals[level - 1])
         .map(info => info?.semitones)
         .find(i => i && transpose(selectedRoot, i) === pitchClass);
-      keyProps.selected = selectedChord?.includes(pitchClass);
+      keyProps.selected = !!allowed && selectedChord?.includes(pitchClass);
       keyProps.showAs = !allowed ? 'collapsed' : inKey ? 'expanded' : 'ghost';
     }
   }
@@ -291,7 +241,7 @@ const roots: PitchClass[] = pitchClasses;
 const thirds = thirdsOf(roots);
 const fifths = thirdsOf(thirds);
 const sevenths = thirdsOf(fifths);
-const ninths = thirdsOf(sevenths);
+// const ninths = thirdsOf(sevenths);
 
 export type KeyboardProps = {
   selectedRoot?: PitchClass;
@@ -302,8 +252,8 @@ export type KeyboardProps = {
 };
 
 export const Keyboard: React.FC<KeyboardProps> = props => {
-  const levels = [roots, thirds, fifths, sevenths, ninths];
-  const { selectedChord, onSelectRoot, onSelectChord } = props;
+  const levels = [roots, thirds, fifths, sevenths /*, ninths */];
+  const { selectedChord, onSelectRoot, onSelectChord, keySignature } = props;
 
   function keyClick(pc: PitchClass, level: number, index: number): void {
     if (level === 0) {
@@ -318,7 +268,12 @@ export const Keyboard: React.FC<KeyboardProps> = props => {
         const semitones = level * MINOR_THIRD + index - selectedChord.root;
         const quality = identifyInterval(semitones, intervalName);
         if (quality) {
-          onSelectChord(selectedChord.altered({ [intervalName]: quality }));
+          onSelectChord(
+            selectedChord.tertianAltered(
+              { [intervalName]: quality },
+              keySignature,
+            ),
+          );
         }
       }
     }
@@ -340,9 +295,9 @@ export const Keyboard: React.FC<KeyboardProps> = props => {
   );
 };
 
-export const KeyboardController: React.FC = props => {
+export const KeyboardController: React.FC = () => {
   const [selectedRoot, setRoot] = useState(pitchClasses[0]);
-  const [selectedChord, setChord] = useState(Chord.major('C'));
+  const [selectedChord, setChord] = useState(Chord.major(selectedRoot));
   const keySignature = Key.major('C');
 
   function onSelectRoot(root: PitchClass): void {
@@ -364,15 +319,18 @@ export const KeyboardController: React.FC = props => {
   }
 
   return (
-    <Keyboard
-      {...{
-        selectedRoot,
-        selectedChord,
-        keySignature,
-        onSelectRoot,
-        onSelectChord,
-      }}
-    />
+    <div>
+      <Keyboard
+        {...{
+          selectedRoot,
+          selectedChord,
+          keySignature,
+          onSelectRoot,
+          onSelectChord,
+        }}
+      />
+      {/* <div>{selectedChord.name()}</div> */}
+    </div>
   );
 };
 

@@ -32,7 +32,7 @@ const shapeStyles = createStyles({
     left: '0',
     vectorEffect: 'non-scaling-stroke',
   },
-  shape: {
+  hexagon: {
     pointerEvents: 'visible',
     fill: 'white',
     stroke: 'black',
@@ -40,7 +40,24 @@ const shapeStyles = createStyles({
     strokeLinejoin: 'round',
     vectorEffect: 'non-scaling-stroke',
   },
-  hover: {
+  hexagonOverlay: {
+    pointerEvents: 'none',
+    opacity: 0,
+    // fill: 'white',
+    // stroke: 'black',
+    // strokeWidth: `8px`,
+    strokeLinejoin: 'round',
+    vectorEffect: 'non-scaling-stroke',
+  },
+  circle: {
+    pointerEvents: 'visible',
+    fill: 'white',
+    stroke: 'black',
+    strokeWidth: `8px`,
+    strokeLinejoin: 'round',
+    vectorEffect: 'non-scaling-stroke',
+  },
+  circleOverlay: {
     pointerEvents: 'none',
     opacity: 0,
   },
@@ -59,20 +76,26 @@ const shapeStyles = createStyles({
 
 export type ShapeClasses = WithStyles<typeof shapeStyles>;
 export type ShapeProps = React.ComponentProps<'div'>;
-type ShapeFlavor = { shape: 'circle' | 'hexagon' };
-type AllShapeProps = ShapeClasses & ShapeProps & ShapeFlavor;
+type AllShapeProps = ShapeClasses & ShapeProps;
 
 const ShapeRaw: React.FC<AllShapeProps> = props => {
-  const { className, classes, shape, ...rest } = props;
+  const { className, classes, ...rest } = props;
 
   return (
     <div className={clsx([classes.root, className])} {...rest}>
-      <svg viewBox="0 0 174 200" className={classes.shapeSvg}>
-        <g clipPath={`url(#shapes_${shape}Clip)`}>
-          <use href={`#shapes_${shape}`} className={classes.shape} />
+      <svg viewBox="-87 -100 174 200" className={classes.shapeSvg}>
+        <g clipPath={`url(#shapes_hexagonClip)`}>
+          <use href={`#shapes_hexagon`} className={classes.hexagon} />
           <use
-            href={`#shapes_${shape}`}
-            className={clsx([classes.shape, classes.hover])}
+            href={`#shapes_hexagon`}
+            className={clsx(classes.hexagonOverlay)}
+          />
+        </g>
+        <g clipPath={`url(#shapes_circleClip)`}>
+          <use href={`#shapes_circle`} className={classes.circle} />
+          <use
+            href={`#shapes_circle`}
+            className={clsx(classes.circle, classes.circleOverlay)}
           />
         </g>
       </svg>
@@ -142,14 +165,4 @@ export const HexGridItem: React.FC<HexGridItemProps> = props => {
       </div>
     </div>
   );
-};
-
-export type HexagonProps = Omit<React.ComponentProps<typeof Shape>, 'shape'>;
-export const Hexagon: React.FC<HexagonProps> = props => {
-  return <Shape shape="hexagon" {...props} />;
-};
-
-export type CircleProps = HexagonProps;
-export const Circle: React.FC<CircleProps> = props => {
-  return <Shape shape="circle" {...props} />;
 };

@@ -98,7 +98,7 @@ export type IntervalType =
   | 'perfect'
   | 'augmented';
 
-export const intervalNames: IntervalName[] = [
+export const intervalNames: IntervalArray<IntervalName> = [
   'third',
   'fifth',
   'seventh',
@@ -115,33 +115,52 @@ export const intervalTypes: IntervalType[] = [
 
 export type IntervalInfo = { semitones?: number; symbol: string };
 
-export const namedIntervals: Record<
-  IntervalName,
-  Record<'none', IntervalInfo> & Partial<Record<IntervalType, IntervalInfo>>
-> = {
-  third: {
+export type IntervalIndex = 0 | 1 | 2 | 3;
+export const I: Record<IntervalName, IntervalIndex> = {
+  third: 0,
+  fifth: 1,
+  seventh: 2,
+  ninth: 3,
+};
+
+export const N: IntervalArray<IntervalName> = [
+  'third',
+  'fifth',
+  'seventh',
+  'ninth',
+];
+
+export type IntervalArray<T> = [T, T, T, T];
+
+export const namedIntervals: IntervalArray<Record<'none', IntervalInfo> &
+  Partial<Record<IntervalType, IntervalInfo>>> = [
+  {
+    // thirds
     none: { symbol: 'sus' },
     minor: { semitones: 3, symbol: 'm' },
     major: { semitones: 4, symbol: '' },
   },
-  fifth: {
+  {
+    // fifths
     none: { symbol: 'drop5' },
     diminished: { semitones: 6, symbol: 'b5' },
     perfect: { semitones: 7, symbol: '' },
     augmented: { semitones: 8, symbol: '#5' },
   },
-  seventh: {
+  {
+    // sevenths
     none: { symbol: '' },
     diminished: { semitones: 9, symbol: 'bb7' },
     minor: { semitones: 10, symbol: 'b7' },
     major: { semitones: 11, symbol: '7' },
   },
-  ninth: {
+  {
+    // ninths
     none: { symbol: '' },
     minor: { semitones: 13, symbol: 'b9' },
     major: { semitones: 14, symbol: '9' },
   },
-};
+];
 
 // Occasionally you just want less structure than this,
 // when you're not being generic over intervals.
@@ -151,13 +170,13 @@ export const FIFTH = 7;
 
 export type NamedIntervals = typeof namedIntervals;
 
-export type Quality<A extends keyof NamedIntervals> = keyof NamedIntervals[A];
+export type Quality<A extends IntervalName> = keyof NamedIntervals[typeof I[A]];
 
 export function identifyInterval(
   interval: Interval,
   name: IntervalName,
 ): IntervalType | undefined {
-  const section = namedIntervals[name];
+  const section = namedIntervals[I[name]];
   for (const t of intervalTypes) {
     if (section[t]?.semitones === interval) {
       return t;
@@ -171,7 +190,7 @@ export type Extension = {
 };
 
 export type ChordParts = {
-  readonly [K in keyof NamedIntervals]: Quality<K>;
+  readonly [K in IntervalName]: Quality<K>;
 };
 
 export type PartsInfo = Record<IntervalName, IntervalInfo>;
@@ -201,7 +220,7 @@ export class ChordType {
 
     for (const k of intervalNames) {
       const part = this.parts[k];
-      this.info[k] = namedIntervals[k][part] || namedIntervals[k].none;
+      this.info[k] = namedIntervals[I[k]][part] || namedIntervals[I[k]].none;
       const { semitones, symbol } = this.info[k];
       if (semitones) {
         this.length++;
@@ -342,6 +361,88 @@ export class Chord {
     return new Chord(this.root, this.type.altered(parts), this.voicing);
   }
 
+  tertianAltered(parts: Partial<ChordParts>, key?: Key): Chord {
+    // all tertian intervals
+    const valid = new Set<Interval>();
+    intervalNames.forEach(name => {
+      intervalTypes.forEach(type => {
+        const semitones = namedIntervals[I[name]][type]?.semitones;
+        if (semitones) valid.add(semitones);
+      });
+    });
+
+    // intervals we've chosen to be in the new chord
+    const newParts: Partial<Record<IntervalName, IntervalType | 'none'>> = {};
+
+    // all intervals compatible with what we've already chosen
+    let reachable = Array.from(valid.keys());
+
+    function choose(name: IntervalName, type: IntervalType | 'none'): void {
+      newParts[name] = type;
+      const info = namedIntervals[I[name]][type];
+      const factor = info && info.semitones;
+      if (factor) {
+        reachable = reachable.filter(interval => {
+          const distance = factor - interval;
+          return distance === 0 || valid.has(distance) || valid.has(-distance);
+        });
+      }
+    }
+
+    // include all the required chord factors
+    intervalNames.forEach(name => {
+      const part = parts[name];
+      if (part) {
+        choose(name, part);
+      }
+    });
+
+    const highestFactor = Math.max(
+      ...intervalNames.map((n, i) => (this.type.parts[n] !== 'none' ? i : -1)),
+    );
+
+    const highestNew = Math.max(
+      ...intervalNames.map((n, i) =>
+        parts[n] && parts[n] !== 'none' ? i : -1,
+      ),
+    );
+
+    // reconstruct the rest of the chord, changing as little as possible
+    intervalNames.forEach((name, i) => {
+      if (newParts[name]) {
+        return; // we've already added this
+      }
+
+      // build a list of candidate values for this chord position
+      const candidates = intervalTypes.filter(type =>
+        reachable.includes(namedIntervals[I[name]][type]?.semitones || -1),
+      );
+      const inKey = candidates.filter(i =>
+        key?.includes(
+          transpose(this.root, namedIntervals[I[name]][i]?.semitones || -1),
+        ),
+      );
+
+      if (i <= highestFactor) {
+        const currentPart = this.type.parts[name];
+        if (currentPart !== 'none') {
+          const interval = this.type.info[name].semitones;
+          if (interval && reachable.includes(interval)) {
+            // the chord has a value in this position, so keep it if we can.
+            choose(name, currentPart);
+          } else {
+            // but if has one that doesn't fit, switch to a value that does
+            choose(name, inKey[0] || candidates[0]);
+          }
+        }
+      } else if (i < highestNew) {
+        choose(name, inKey[0] || candidates[0]);
+      }
+    });
+
+    return new Chord(this.root, new ChordType(newParts));
+  }
+
   static defineNamed(name: ChordTypeName) {
     return function namedChord(
       root: PitchClassOrName,
@@ -356,3 +457,5 @@ export class Chord {
   static diminished = Chord.defineNamed('diminished');
   static augmented = Chord.defineNamed('augmented');
 }
+
+eval('if (this.alert) this.Chord = Chord');
