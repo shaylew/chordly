@@ -9,7 +9,7 @@ import {
 
 import '../images/shapes.svg';
 
-const hexagonHeight = 2 / Math.sqrt(3);
+export const hexagonHeight = 2 / Math.sqrt(3);
 
 const shapeStyles = createStyles({
   root: {
@@ -34,26 +34,17 @@ const shapeStyles = createStyles({
   },
   hexagon: {
     pointerEvents: 'visible',
-    fill: 'white',
-    stroke: 'black',
-    strokeWidth: `8px`,
     strokeLinejoin: 'round',
     vectorEffect: 'non-scaling-stroke',
   },
   hexagonOverlay: {
     pointerEvents: 'none',
     opacity: 0,
-    // fill: 'white',
-    // stroke: 'black',
-    // strokeWidth: `8px`,
     strokeLinejoin: 'round',
     vectorEffect: 'non-scaling-stroke',
   },
   circle: {
     pointerEvents: 'visible',
-    fill: 'white',
-    stroke: 'black',
-    strokeWidth: `8px`,
     strokeLinejoin: 'round',
     vectorEffect: 'non-scaling-stroke',
   },
@@ -106,7 +97,7 @@ const ShapeRaw: React.FC<AllShapeProps> = props => {
 
 export const Shape = withStyles(shapeStyles)(ShapeRaw);
 
-const useHexRowStyles = makeStyles({
+const useHexGridStyles = makeStyles({
   grid: {
     display: 'flex',
     flexDirection: 'column',
@@ -134,7 +125,7 @@ const useHexRowStyles = makeStyles({
 });
 
 export const HexGrid: React.FC<React.ComponentProps<'div'>> = props => {
-  const classes = useHexRowStyles();
+  const classes = useHexGridStyles();
   return (
     <div {...props} className={clsx([classes.grid, props.className])}>
       {props.children}
@@ -143,7 +134,7 @@ export const HexGrid: React.FC<React.ComponentProps<'div'>> = props => {
 };
 
 export const HexGridRow: React.FC = props => {
-  const classes = useHexRowStyles();
+  const classes = useHexGridStyles();
   return <div className={classes.row}>{props.children}</div>;
 };
 
@@ -152,17 +143,15 @@ export const HexGridSpacer: React.FC<HexRowSpacerProps> = props => {
   return <div style={{ flex: `${props.count} ${props.count} 0` }} />;
 };
 
-export type HexGridItemProps = { width?: string } & React.ComponentProps<'div'>;
+export type HexGridItemProps = React.ComponentProps<'div'>;
 
 export const HexGridItem: React.FC<HexGridItemProps> = props => {
-  const { width = '100%', style = {}, ...rest } = props;
-  const classes = useHexRowStyles();
+  const { children, ...rest } = props;
+  const classes = useHexGridStyles();
 
   return (
     <div className={classes.wrapper}>
-      <div style={{ flex: `0 0 ${width}`, ...style }} {...rest}>
-        {props.children}
-      </div>
+      <div {...rest}>{children}</div>
     </div>
   );
 };

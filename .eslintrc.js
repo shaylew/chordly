@@ -24,12 +24,14 @@ module.exports = {
   },
   overrides: [
     {
-      files: ['**/*.tsx'],
+      files: ['**/*.ts', '**/*.tsx'],
       rules: {
         'react/prop-types': 'off',
         '@typescript-eslint/no-unused-vars': [
           'warn',
           {
+            vars: 'all',
+            args: 'all',
             varsIgnorePattern: '^_',
             argsIgnorePattern: '^_',
             ignoreRestSiblings: true,

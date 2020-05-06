@@ -9,6 +9,7 @@ import {
   Key,
   intervalNames,
   pitchClasses,
+  prettyName,
   pcToName,
   transpose,
   identifyInterval,
@@ -22,10 +23,12 @@ import {
   HexGridItem,
   HexGridSpacer,
   Shape,
+  hexagonHeight,
 } from './HexGrid';
 
 export type NoteKeyProps = {
   pitchClass: PitchClass; // the note this key plays
+  label?: string; // what the key says
   root?: boolean; // is this key on the bottom tier
   inKey?: boolean; // is this note in the current key (if any)
   selected?: boolean; // is this note a selected chord part
@@ -43,6 +46,7 @@ const useKeyStyles = makeStyles({
   expanded: {
     '& $circle': {
       opacity: 0,
+      transform: 'scale(0.66)',
     },
     '& $content': {
       opacity: 1,
@@ -55,6 +59,9 @@ const useKeyStyles = makeStyles({
     },
   },
   ghost: {
+    '& $circle': {
+      transform: 'scale(0.66)',
+    },
     '&:not($selected) $hexagon': {
       opacity: 0,
     },
@@ -101,7 +108,6 @@ const useKeyStyles = makeStyles({
       opacity: 0.5,
     },
     '& $circle': {
-      transform: 'scale(0.66)',
       fill: 'var(--note-color-200)',
     },
   },
@@ -137,12 +143,19 @@ const useKeyStyles = makeStyles({
     opacity: 0,
     transition: standardTransition,
     zIndex: 100,
+    cursor: 'pointer',
+    userSelect: 'none',
+    fontSize: 'min(3vw, 2em)',
   },
   buttonBase: {
     height: '100%',
     width: '100%',
-    display: 'block',
-    fontSize: 'min(3vw, 2em)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  hexItem: {
+    width: 'calc(100% - 4px)',
   },
 });
 
@@ -154,6 +167,7 @@ const NoteKey: React.FC<NoteKeyProps> = props => {
     inKey = true,
     resonating = false,
     showAs = 'expanded',
+    label = prettyName(pcToName(pitchClass)),
   } = props;
 
   const colors = useNoteColors();
@@ -179,14 +193,11 @@ const NoteKey: React.FC<NoteKeyProps> = props => {
   };
 
   return (
-    <HexGridItem width="calc(100% - 4px)">
+    <HexGridItem className={classes.hexItem}>
       <Shape classes={shapeClasses}>
-        <ButtonBase
-          classes={{ root: classes.buttonBase }}
-          onClick={props.onClick}
-        >
-          {pcToName(pitchClass)}
-        </ButtonBase>
+        <div className={classes.buttonBase} onClick={props.onClick}>
+          {label}
+        </div>
       </Shape>
     </HexGridItem>
   );
@@ -196,16 +207,17 @@ export type KeyboardKeyProps = KeyboardProps & {
   pitchClass: PitchClass;
   level: number;
   index: number;
+  resonating?: boolean;
+  disabled?: boolean;
   onClick?: (pitchClass: PitchClass, level: number, index: number) => void;
 };
 
 export const KeyboardKey: React.FC<KeyboardKeyProps> = props => {
   const { selectedChord, selectedRoot, keySignature } = props;
-  const { pitchClass, level, index, onClick } = props;
+  const { pitchClass, level, index, resonating, disabled, onClick } = props;
 
   const root = level === 0;
   const inKey = !keySignature || keySignature.includes(pitchClass);
-  const resonating = !!selectedChord?.includes(pitchClass);
 
   const keyProps: NoteKeyProps = { pitchClass, root, resonating, inKey };
   if (root) {
@@ -221,9 +233,19 @@ export const KeyboardKey: React.FC<KeyboardKeyProps> = props => {
       const allowed = Object.values(namedIntervals[level - 1])
         .map(info => info?.semitones)
         .find(i => i && transpose(selectedRoot, i) === pitchClass);
-      keyProps.selected = !!allowed && selectedChord?.includes(pitchClass);
-      keyProps.showAs = !allowed ? 'collapsed' : inKey ? 'expanded' : 'ghost';
+      const selected = !!allowed && selectedChord?.includes(pitchClass);
+      keyProps.selected = selected;
+      keyProps.showAs = selected
+        ? 'expanded'
+        : allowed && !disabled
+        ? inKey
+          ? 'expanded'
+          : 'ghost'
+        : 'collapsed';
     }
+  } else {
+    keyProps.selected = false;
+    keyProps.showAs = 'collapsed';
   }
 
   const handleClick = onClick && (() => onClick(pitchClass, level, index));
@@ -241,26 +263,65 @@ const roots: PitchClass[] = pitchClasses;
 const thirds = thirdsOf(roots);
 const fifths = thirdsOf(thirds);
 const sevenths = thirdsOf(fifths);
-// const ninths = thirdsOf(sevenths);
+const ninths = thirdsOf(sevenths);
+const levels = [roots, thirds, fifths, sevenths, ninths];
+
+const keyboardWidth = levels[levels.length - 1].length;
+const useKeyboardStyles = makeStyles({
+  root: {
+    margin: `${(100 / keyboardWidth) * (hexagonHeight - 1)}% 0`,
+    flexDirection: 'column-reverse',
+  },
+});
 
 export type KeyboardProps = {
   selectedRoot?: PitchClass;
   selectedChord?: Chord;
   keySignature?: Key;
+  resonatingChord?: Chord;
+  disabled?: boolean;
   onSelectRoot?: (root: PitchClass) => void;
   onSelectChord?: (chord: Chord) => void;
 };
 
+function findChordForRoot(
+  root: PitchClass,
+  keySignature?: Key,
+  previousChord?: Chord,
+): Chord {
+  if (root === previousChord?.root) return previousChord;
+
+  const options = [
+    ...(previousChord ? [new Chord(root, previousChord.type)] : []),
+    Chord.major(root),
+    Chord.minor(root),
+    Chord.diminished(root),
+    Chord.augmented(root),
+  ];
+  const bestFit = keySignature
+    ? options.find(c =>
+        c.pitches.slice(1).every(pc => keySignature.includes(pc)),
+      )
+    : undefined;
+  return bestFit || Chord.major(root);
+}
+
 export const Keyboard: React.FC<KeyboardProps> = props => {
-  const levels = [roots, thirds, fifths, sevenths /*, ninths */];
-  const { selectedChord, onSelectRoot, onSelectChord, keySignature } = props;
+  const {
+    selectedChord,
+    selectedRoot = selectedChord?.root,
+    resonatingChord,
+    onSelectChord,
+    keySignature,
+    disabled,
+  } = props;
 
   function keyClick(pc: PitchClass, level: number, index: number): void {
-    if (level === 0) {
-      onSelectRoot && onSelectRoot(pc);
-    } else {
-      if (onSelectChord === undefined || selectedChord === undefined) return;
+    if (!onSelectChord) return;
 
+    if (level === 0) {
+      onSelectChord(findChordForRoot(pc, keySignature, selectedChord));
+    } else if (selectedChord) {
       const intervalName = intervalNames[level - 1];
       if (selectedChord.includes(pc)) {
         onSelectChord(selectedChord.altered({ [intervalName]: 'none' }));
@@ -279,14 +340,28 @@ export const Keyboard: React.FC<KeyboardProps> = props => {
     }
   }
 
+  const classes = useKeyboardStyles();
+
+  const keyProps = { keySignature, selectedChord, selectedRoot, disabled };
+
   return (
-    <HexGrid style={{ flexDirection: 'column-reverse' }}>
+    <HexGrid className={classes.root}>
       {levels.map((pcs, level) => (
         <HexGridRow key={level}>
           <HexGridSpacer count={(levels.length - level - 1) / 2} />
           {pcs.map((pitchClass, index) => {
-            const keyProps = { ...props, pitchClass, level, index };
-            return <KeyboardKey key={index} onClick={keyClick} {...keyProps} />;
+            const resonating = !!resonatingChord?.includes(pitchClass);
+            return (
+              <KeyboardKey
+                key={index}
+                level={level}
+                index={index}
+                pitchClass={pitchClass}
+                onClick={keyClick}
+                resonating={resonating}
+                {...keyProps}
+              />
+            );
           })}
           <HexGridSpacer count={(levels.length - level - 1) / 2} />
         </HexGridRow>
@@ -295,23 +370,12 @@ export const Keyboard: React.FC<KeyboardProps> = props => {
   );
 };
 
-export const KeyboardController: React.FC = () => {
+type KeyboardControllerProps = { keySignature?: Key };
+
+export const KeyboardController: React.FC<KeyboardControllerProps> = props => {
   const [selectedRoot, setRoot] = useState(pitchClasses[0]);
   const [selectedChord, setChord] = useState(Chord.major(selectedRoot));
-  const keySignature = Key.major('C');
-
-  function onSelectRoot(root: PitchClass): void {
-    if (root === selectedRoot) return;
-
-    const chord = [
-      Chord.major(root),
-      Chord.minor(root),
-      Chord.diminished(root),
-      Chord.augmented(root),
-    ].find(c => c.pitches.slice(1).every(pc => keySignature.includes(pc)));
-    setRoot(root);
-    setChord(chord || Chord.major(root));
-  }
+  const keySignature = props.keySignature || Key.major('C');
 
   function onSelectChord(chord: Chord): void {
     setRoot(chord.root);
@@ -325,11 +389,10 @@ export const KeyboardController: React.FC = () => {
           selectedRoot,
           selectedChord,
           keySignature,
-          onSelectRoot,
           onSelectChord,
+          resonatingChord: selectedChord,
         }}
       />
-      {/* <div>{selectedChord.name()}</div> */}
     </div>
   );
 };

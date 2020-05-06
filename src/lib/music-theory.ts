@@ -113,7 +113,7 @@ export const intervalTypes: IntervalType[] = [
   'augmented',
 ];
 
-export type IntervalInfo = { semitones?: number; symbol: string };
+export type IntervalInfo = { semitones?: number; symbol: string; name: string };
 
 export type IntervalIndex = 0 | 1 | 2 | 3;
 export const I: Record<IntervalName, IntervalIndex> = {
@@ -136,30 +136,39 @@ export const namedIntervals: IntervalArray<Record<'none', IntervalInfo> &
   Partial<Record<IntervalType, IntervalInfo>>> = [
   {
     // thirds
-    none: { symbol: 'sus' },
-    minor: { semitones: 3, symbol: 'm' },
-    major: { semitones: 4, symbol: '' },
+    none: { name: 'none', symbol: 'sus' },
+    minor: { name: 'minor', semitones: 3, symbol: 'm' },
+    major: { name: 'major', semitones: 4, symbol: '' },
   },
   {
     // fifths
-    none: { symbol: 'drop5' },
-    diminished: { semitones: 6, symbol: 'b5' },
-    perfect: { semitones: 7, symbol: '' },
-    augmented: { semitones: 8, symbol: '#5' },
+    none: { symbol: 'no5', name: 'none' },
+    diminished: { semitones: 6, symbol: '♭5', name: 'diminished' },
+    perfect: { semitones: 7, symbol: '', name: 'perfect' },
+    augmented: { semitones: 8, symbol: '♯5', name: 'augmented' },
   },
   {
     // sevenths
-    none: { symbol: '' },
-    diminished: { semitones: 9, symbol: 'bb7' },
-    minor: { semitones: 10, symbol: 'b7' },
-    major: { semitones: 11, symbol: '7' },
+    none: { symbol: '', name: 'none' },
+    diminished: { semitones: 9, symbol: '𝄫7', name: 'diminished' },
+    minor: { semitones: 10, symbol: '♭7', name: 'minor' },
+    major: { semitones: 11, symbol: '7', name: 'major' },
   },
   {
     // ninths
-    none: { symbol: '' },
-    minor: { semitones: 13, symbol: 'b9' },
-    major: { semitones: 14, symbol: '9' },
+    none: { symbol: '', name: 'none' },
+    minor: { semitones: 13, symbol: '♭9', name: 'minor' },
+    major: { semitones: 14, symbol: '9', name: 'major' },
   },
+];
+
+export const namedTriads: ReadonlyArray<Partial<
+  Record<'name' | IntervalName, IntervalType>
+>> = [
+  { name: 'major', third: 'major', fifth: 'perfect' },
+  { name: 'minor', third: 'minor', fifth: 'perfect' },
+  // { name: 'augmented', third: 'major', fifth: 'augmented' },
+  // { name: 'diminished', third: 'minor', fifth: 'diminished' },
 ];
 
 // Occasionally you just want less structure than this,
@@ -193,7 +202,7 @@ export type ChordParts = {
   readonly [K in IntervalName]: Quality<K>;
 };
 
-export type PartsInfo = Record<IntervalName, IntervalInfo>;
+export type PartsInfo = IntervalArray<IntervalInfo>;
 
 const noParts: ChordParts = {
   third: 'none',
@@ -201,6 +210,13 @@ const noParts: ChordParts = {
   seventh: 'none',
   ninth: 'none',
 };
+
+const noInfo: PartsInfo = [
+  namedIntervals[0].none,
+  namedIntervals[1].none,
+  namedIntervals[2].none,
+  namedIntervals[3].none,
+];
 
 export class ChordType {
   readonly info: PartsInfo;
@@ -213,30 +229,26 @@ export class ChordType {
   constructor(parts: Partial<ChordParts>) {
     this.parts = { ...noParts, ...parts };
 
-    this.info = {} as PartsInfo;
-    this.length = 0;
-    this.symbol = '';
-    const mutIntervals = [0];
+    this.info = noInfo.slice() as typeof noInfo;
 
-    for (const k of intervalNames) {
-      const part = this.parts[k];
-      this.info[k] = namedIntervals[I[k]][part] || namedIntervals[I[k]].none;
-      const { semitones, symbol } = this.info[k];
+    let length = 0;
+    let symbols = '';
+    const intervals = [0];
+
+    intervalNames.forEach((name, i) => {
+      const part = this.parts[name];
+      this.info[i] = namedIntervals[i][part] || namedIntervals[i].none;
+      const { semitones, symbol } = this.info[i];
       if (semitones) {
-        this.length++;
-        this.symbol += symbol;
-        mutIntervals.push(semitones);
+        length++;
+        symbols += symbol;
+        intervals.push(semitones);
       }
-    }
-    this.intervals = mutIntervals;
+    });
+    this.length = length;
+    this.symbol = symbols;
+    this.intervals = intervals;
   }
-
-  static names = {
-    major: new ChordType({ third: 'major', fifth: 'perfect' }),
-    minor: new ChordType({ third: 'minor', fifth: 'perfect' }),
-    diminished: new ChordType({ third: 'minor', fifth: 'diminished' }),
-    augmented: new ChordType({ third: 'major', fifth: 'augmented' }),
-  };
 
   altered(parts: Partial<ChordParts>): ChordType {
     return new ChordType({ ...this.parts, ...parts });
@@ -252,6 +264,20 @@ export class ChordType {
       return [...below.map(i => i - 12), ...above];
     }
   }
+
+  get triad(): string | undefined {
+    const t = namedTriads.find(
+      t => t.third === this.parts.third && t.fifth === this.parts.fifth,
+    );
+    return t ? t.name : undefined;
+  }
+
+  static names = {
+    major: new ChordType({ third: 'major', fifth: 'perfect' }),
+    minor: new ChordType({ third: 'minor', fifth: 'perfect' }),
+    diminished: new ChordType({ third: 'minor', fifth: 'diminished' }),
+    augmented: new ChordType({ third: 'major', fifth: 'augmented' }),
+  };
 
   static named(name: ChordTypeName, extension?: Extension): ChordType {
     const base = ChordType.names[name];
@@ -285,6 +311,11 @@ export class Key {
     this.tonic = toPitchClass(tonic);
   }
 
+  noteName(pcOrName: PitchClassOrName): string {
+    const pc = typeof pcOrName === 'number' ? pcOrName : nameToPC(pcOrName);
+    return prettyName(pcToName(pc, this.accidentals));
+  }
+
   static fromScale(
     name: string,
     tonic: PitchClassOrName,
@@ -302,6 +333,10 @@ export class Key {
 
   static minor(tonic: PitchClassOrName, accidentals?: Accidental): Key {
     return Key.fromScale('minor', tonic, [0, 2, 3, 5, 7, 9, 11], accidentals);
+  }
+
+  static chromatic(tonic: PitchClassOrName, accidentals?: Accidental): Key {
+    return Key.fromScale('chromatic', tonic, pitchClasses, accidentals);
   }
 
   includes(element: PitchClassOrName | Chord): boolean {
@@ -426,7 +461,7 @@ export class Chord {
       if (i <= highestFactor) {
         const currentPart = this.type.parts[name];
         if (currentPart !== 'none') {
-          const interval = this.type.info[name].semitones;
+          const interval = this.type.info[i].semitones;
           if (interval && reachable.includes(interval)) {
             // the chord has a value in this position, so keep it if we can.
             choose(name, currentPart);

@@ -1,67 +1,64 @@
 import React from 'react';
-import { Interpreter } from 'xstate';
-import { useService } from '@xstate/react';
-
 import { makeStyles } from '@material-ui/core/styles';
-import { ClickAwayListener } from '@material-ui/core';
 
-import { Key } from '../types';
-import {
-  TimelineEvent,
-  TimelineContext,
-  TimelineSchema,
-} from '../machines/timeline';
+import { Key, Song, Chord } from '../types';
 import TimelineProgress from './TimelineProgress';
 import TimelineSlot from './TimelineSlot';
+import ChordDisplay, {
+  ChordDisplayProps,
+  ChordButtonEvents,
+  ChordButtonEvent,
+  mkChordEvents,
+} from './ChordDisplay';
 
 export type TimelineProps = {
+  song: Song;
   playing?: boolean;
-  keySignature?: Key;
-  stateMachineRef: Interpreter<TimelineContext, TimelineSchema, TimelineEvent>;
+  playingIndex?: number;
+  onDelete?: (chord: Chord, index: number) => void;
+  chordProps: Partial<ChordDisplayProps>;
+  chordEvents: ChordButtonEvents<number>;
 };
 
 const useStyles = makeStyles({
   root: {
     position: 'relative',
-    display: 'flex',
-    flexDirection: 'row',
+    display: 'grid',
+    gridTemplateRows: 'min-content auto',
+    gridTemplateColumns: '1fr 1fr 1fr 1fr',
+    gridAutoRows: '1fr',
     alignItems: 'stretch',
-  },
-  slotWrapper: {
-    flexGrow: 1,
-    padding: '0.5em',
+    gridGap: '2em 1.5em',
   },
 });
 
 export const Timeline: React.FC<TimelineProps> = props => {
-  const { playing, stateMachineRef, keySignature } = props;
-  const classes = useStyles();
-
-  const [current, send] = useService(stateMachineRef);
-  const state = current || stateMachineRef.initialState;
-
-  const { song, selectedMeasure } = state.context;
+  const {
+    song,
+    onDelete,
+    playing,
+    playingIndex,
+    chordProps,
+    chordEvents,
+  } = props;
   const totalBars = song.measures.length;
+
+  const classes = useStyles();
 
   return (
     <div className={classes.root}>
       <TimelineProgress totalBars={totalBars} playing={playing} />
       {song.measures.map((measure, i) => {
-        const selected = i === selectedMeasure;
+        const selected = i === playingIndex;
+        const chord = measure.chord;
+        const events = mkChordEvents(chordEvents, chord, i);
         return (
-          <ClickAwayListener
+          <TimelineSlot
             key={i}
-            onClickAway={() => selected && send('DESELECT')}
+            onDelete={onDelete && (() => onDelete(chord, i))}
           >
-            <div className={classes.slotWrapper}>
-              <TimelineSlot
-                keySignature={keySignature}
-                measure={measure}
-                selected={selected}
-                onClick={() => send({ type: 'MEASURE.SELECT', id: i })}
-              />
-            </div>
-          </ClickAwayListener>
+            <ChordDisplay chord={chord} {...chordProps} {...events} />
+          </TimelineSlot>
         );
       })}
     </div>

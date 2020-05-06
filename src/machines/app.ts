@@ -51,7 +51,7 @@ export const appConfig: MachineConfig<AppContext, AppSchema, AppEvent> = {
   states: {
     initializing: {
       entry: assign({
-        timeline: context => spawn(timelineMachine, { sync: true }),
+        timeline: _context => spawn(timelineMachine, { sync: true }),
       }),
       on: { '': 'idle' },
     },

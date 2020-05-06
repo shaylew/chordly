@@ -20,24 +20,29 @@ function mkTheme(color: string): Theme {
   });
 }
 
-export const colors = [
+export const rainbow = [
   MuiColors.yellow,
   MuiColors.amber,
-  MuiColors.orange,
-  // (MuiColors.deepOrange),
+  // MuiColors.orange,
+  MuiColors.deepOrange,
   MuiColors.red,
-  MuiColors.pink,
+  // MuiColors.pink,
   MuiColors.purple,
-  // (MuiColors.deepPurple),
+  MuiColors.deepPurple,
   MuiColors.indigo,
-  MuiColors.blue,
-  //mkTheme(MuiColors.lightBlue),
+  // MuiColors.blue,
+  MuiColors.lightBlue,
   MuiColors.cyan,
-  MuiColors.teal,
+  // MuiColors.teal,
   MuiColors.green,
-  // mkTheme(MuiColors.lightGreen),
+  MuiColors.lightGreen,
   MuiColors.lime,
 ];
+
+const prime = 5;
+export const colors = rainbow.map((_, i) => {
+  return rainbow[(i * prime) % rainbow.length];
+});
 
 export function noteColor(note: PitchClass): Color {
   return colors[note];
@@ -50,13 +55,15 @@ export function noteTheme(note: PitchClass): Theme {
 }
 
 const colorStyles: StyleRules = {};
-colors.forEach((color, pc) => {
+function defineColorStyles(color: Color, pc: number | string): void {
   const style: CSSProperties = {};
   Object.entries(color).forEach(([weight, c]) => {
     style[`--note-color-${weight}`] = c;
   });
   colorStyles[`note-${pc}`] = style;
-});
+}
+colors.forEach(defineColorStyles);
+defineColorStyles(MuiColors.grey, 'none');
 export const useNoteColors = makeStyles(colorStyles);
 
 // export const altColors: string[] = [

@@ -1,5 +1,4 @@
 import React from 'react';
-import { Interpreter } from 'xstate';
 
 import {
   Card,
@@ -12,25 +11,11 @@ import PlayIcon from '@material-ui/icons/PlayCircleFilled';
 import PauseIcon from '@material-ui/icons/PauseCircleOutline';
 import LoopIcon from '@material-ui/icons/Loop';
 
-import { Key } from '../types';
-import Timeline from './Timeline';
-import {
-  TimelineContext,
-  TimelineSchema,
-  TimelineEvent,
-} from '../machines/timeline';
-import KeySelect from './KeySelect';
-
 export type SongCardProps = {
   playing: boolean;
   looping: boolean;
-  keySignature?: Key;
   onTogglePlay?: () => void;
   onToggleLoop?: () => void;
-  isSelectingKey?: boolean;
-  onSelectKey?: () => void;
-  onSelectKeyCancel?: () => void;
-  timelineMachine: Interpreter<TimelineContext, TimelineSchema, TimelineEvent>;
 };
 
 const useStyles = makeStyles(theme =>
@@ -77,17 +62,7 @@ const useIconStyles = makeStyles(_theme =>
 );
 
 export const SongCard: React.FC<SongCardProps> = props => {
-  const {
-    playing,
-    looping,
-    keySignature,
-    onTogglePlay,
-    onToggleLoop,
-    isSelectingKey,
-    onSelectKey,
-    onSelectKeyCancel,
-    timelineMachine,
-  } = props;
+  const { children, playing, looping, onTogglePlay, onToggleLoop } = props;
 
   const classes = useStyles();
   const buttonClasses = useButtonStyles();
@@ -100,7 +75,7 @@ export const SongCard: React.FC<SongCardProps> = props => {
   );
 
   return (
-    <Card raised style={{ marginTop: '1.5em' }}>
+    <Card raised>
       <div className={classes.header}>
         <div className={classes.headerLeft}>
           <IconButton
@@ -121,22 +96,8 @@ export const SongCard: React.FC<SongCardProps> = props => {
             <LoopIcon fontSize="large" />
           </IconButton>
         </div>
-        <div className={classes.headerRight}>
-          <KeySelect
-            keySignature={keySignature}
-            selected={isSelectingKey}
-            onClick={onSelectKey}
-            onClickAway={onSelectKeyCancel}
-          />
-        </div>
       </div>
-      <CardContent>
-        <Timeline
-          playing={playing}
-          keySignature={keySignature}
-          stateMachineRef={timelineMachine}
-        />
-      </CardContent>
+      <CardContent>{children}</CardContent>
     </Card>
   );
 };

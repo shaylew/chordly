@@ -3,15 +3,20 @@ import { useMachine } from '@xstate/react';
 
 import { Chord } from '../types';
 import usePlayer from './PlayerContext';
-import { ChordButtonProps, ChordButton } from './ChordButton';
+import { ChordDisplayProps, ChordDisplay } from './ChordDisplay';
 import holdButtonMachine from '../machines/holdButton';
 
-export type ChordPlayButtonProps = {
-  onChordClick?: (chord: Chord) => void;
-} & ChordButtonProps;
+export type ChordPlayButtonProps = ChordDisplayProps;
 
 export const ChordPlayButton: React.FC<ChordPlayButtonProps> = props => {
-  const { chord, onChordClick, ...rest } = props;
+  const {
+    chord,
+    onMouseDown,
+    onMouseUp,
+    onMouseLeave,
+    onClick,
+    ...rest
+  } = props;
 
   const player = usePlayer();
 
@@ -27,17 +32,24 @@ export const ChordPlayButton: React.FC<ChordPlayButtonProps> = props => {
   });
 
   return (
-    <ChordButton
+    <ChordDisplay
       chord={chord}
       {...rest}
-      onMouseDown={() => send('PRESS')}
-      onMouseUp={() => send('RELEASE')}
-      onMouseLeave={() => send('RELEASE')}
-      onClick={() => {
+      onMouseDown={e => {
+        send('PRESS');
+        onMouseDown && onMouseDown(e);
+      }}
+      onMouseUp={e => {
+        send('RELEASE');
+        onMouseUp && onMouseUp(e);
+      }}
+      onMouseLeave={e => {
+        send('RELEASE');
+        onMouseLeave && onMouseLeave(e);
+      }}
+      onClick={e => {
         send('CLICK');
-        if (onChordClick) {
-          onChordClick(chord);
-        }
+        onClick && onClick(e);
       }}
     />
   );

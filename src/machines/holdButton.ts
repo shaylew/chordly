@@ -10,11 +10,12 @@ export interface HoldButtonEvent extends EventObject {
 
 export interface HoldButtonSchema {
   states: {
-    idle: {};
+    unpressed: {};
     pressing: {};
     holding: {};
     releasingFast: {};
     releasingSlow: {};
+    done: {};
   };
 }
 
@@ -25,25 +26,19 @@ export const holdButtonConfig: MachineConfig<
   HoldButtonSchema,
   HoldButtonEvent
 > = {
-  initial: 'idle',
+  initial: 'unpressed',
 
   states: {
-    idle: {
+    unpressed: {
       on: {
-        CLICK: {
-          actions: 'pressEffect',
-          target: 'releasingSlow',
-        },
+        CLICK: { target: 'releasingSlow' },
         PRESS: { target: 'pressing' },
       },
     },
     pressing: {
-      entry: 'pressEffect',
+      after: { [holdTime]: { target: 'holding' } },
       on: {
         RELEASE: { target: 'releasingSlow' },
-      },
-      after: {
-        [holdTime]: { target: 'holding' },
       },
     },
     holding: {
@@ -52,20 +47,13 @@ export const holdButtonConfig: MachineConfig<
       },
     },
     releasingSlow: {
-      after: {
-        [holdTime]: {
-          actions: 'releaseEffect',
-          target: 'idle',
-        },
-      },
+      after: { [holdTime]: { target: 'done' } },
     },
     releasingFast: {
-      after: {
-        [holdTime / 4]: {
-          actions: 'releaseEffect',
-          target: 'idle',
-        },
-      },
+      after: { [holdTime / 4]: { target: 'done' } },
+    },
+    done: {
+      type: 'final',
     },
   },
 };
