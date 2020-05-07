@@ -1,14 +1,14 @@
 import * as Tone from 'tone';
 
 import { ToneTime, ToneSynth, Song, Chord } from '../types';
+import { Monophonic } from 'tone/build/esm/instrument/Monophonic';
 
 function toNotes(chord: Chord): Array<string> {
   return chord.notes.map(n => n.toString());
 }
 
-function mkSynth(voices: number): ToneSynth {
+function mkSynth(): ToneSynth {
   return new Tone.PolySynth({
-    maxPolyphony: voices,
     voice: Tone.Synth,
     options: {},
   }).toDestination();
@@ -20,8 +20,8 @@ export class Player {
   public song?: Song;
 
   constructor() {
-    this.songSynth = mkSynth(16).sync();
-    this.buttonSynth = mkSynth(16);
+    this.songSynth = mkSynth();
+    this.buttonSynth = mkSynth();
   }
 
   triggerChord(
@@ -49,43 +49,44 @@ export class Player {
     return this;
   }
 
-  setSong(song: Song): void {
-    this.song = song;
-  }
+  playSong(
+    song: Song,
+    options?: {
+      onMeasure?: (index: number) => void;
+      onFinish?: () => void;
+    },
+  ): void {
+    const { onMeasure, onFinish } = options || {};
 
-  startSong(onFinish?: () => void): void {
-    if (!this.song) {
-      return;
-    }
+    Tone.Transport.cancel(0);
+    Tone.Transport.bpm.value = 240;
 
-    Tone.Transport.stop();
-    Tone.Transport.cancel();
-    Tone.Transport.bpm.value = this.song.bpm || 120;
-    Tone.Transport.position = 0;
-    this.songSynth.releaseAll();
-
-    this.song.measures.forEach((measure, i) => {
-      const chord = measure.chord;
-      this.songSynth.triggerAttackRelease(toNotes(chord), '1m', `${i}m`);
+    song.measures.forEach(({ chord }, i) => {
+      const notes = toNotes(chord);
+      Tone.Transport.scheduleOnce(time => {
+        this.songSynth.triggerAttackRelease(notes, '1m', time);
+        if (onMeasure) onMeasure(i);
+      }, `${i}m`);
     });
 
-    const songEnd = `${this.song.measures.length + 1}m`;
+    const endTime = `${song.measures.length}m`;
     Tone.Transport.scheduleOnce(() => {
-      this.songSynth.releaseAll();
-      onFinish && onFinish();
-    }, songEnd);
+      this.stopSong();
+      if (onFinish) {
+        onFinish();
+      }
+    }, endTime);
 
     Tone.Transport.start();
   }
 
   stopSong(): void {
-    this.songSynth.releaseAll();
-    // avoid a race condition where the synth doesn't release because
-    // the transport is already stopped. poorly.
-    setTimeout(() => {
-      Tone.Transport.cancel();
-      Tone.Transport.stop();
-    }, 100);
+    // Workaround for a tone.js bug -- .releaseAll doesn't cut it.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.songSynth as any)._voices.forEach((v: Monophonic<any>) => {
+      v.triggerRelease();
+    });
+    Tone.Transport.stop();
   }
 
   setLoop(loop: boolean): void {
@@ -102,7 +103,7 @@ export class Player {
   }
 
   dispose(): void {
-    this.songSynth.dispose();
+    this.songSynth?.dispose();
     this.buttonSynth.dispose();
   }
 }

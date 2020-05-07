@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useMachine } from '@xstate/react';
 import * as Tone from 'tone';
 
@@ -30,37 +30,33 @@ const defaultSong: Song = {
 export const App: React.FC = () => {
   const player = usePlayer();
 
-  // We have to keep track of this ourselves, because the state machine
-  // has already forgotten it by the time we get the action back.
-  const [lastPlayed, setLastPlayed] = useState<Chord | undefined>(undefined);
-
-  const [current, send, interpreter] = useMachine(appMachine, {
+  const [current, send] = useMachine(appMachine, {
     context: {
       keySignature: Key.major('C', 'sharp'),
+      song: defaultSong,
     },
-    actions: {
-      chordStart: context => {
+    activities: {
+      playingChord: (context, _activity) => {
         const chord = context.playingChord;
         if (chord) {
-          setLastPlayed(chord);
           player?.triggerChordStart(chord);
+          return () => player?.triggerChordEnd(chord);
         }
       },
-      chordStop: _context => {
-        if (lastPlayed) {
-          player?.triggerChordEnd(lastPlayed);
-          setLastPlayed(undefined);
+      playingSong: (context, _activity) => {
+        const song = context.song;
+        if (song) {
+          player?.playSong(song, {
+            onMeasure: index => send({ type: 'PLAY.PROGRESS', index }),
+            onFinish: () => send('PLAY.FINISH'),
+          });
+          return () => player?.stopSong();
         }
       },
     },
   });
 
-  useEffect(() => {
-    // interpreter.onEvent(e => console.log(e));
-    send({ type: 'SONG.SET', song: defaultSong });
-  }, [interpreter]);
-
-  const playing = current.matches('playing');
+  const playing = current.matches('playingSong');
   const {
     keySignature,
     selectedChord,
@@ -85,10 +81,8 @@ export const App: React.FC = () => {
   };
 
   const onTogglePlay = (): void => {
-    // unfortunately if we let the machine do this the browser forgets
-    // that the action was user-initiated and prevents the sound.
-    // Tone.start();
-    // playing ? send('SONG.STOP') : send('SONG.START');
+    Tone.start();
+    !playing ? send('PLAY.START') : send('PLAY.STOP');
   };
 
   const chordButtonEvents = {
@@ -114,7 +108,8 @@ export const App: React.FC = () => {
             {...{
               song,
               onDelete: onChordDelete,
-              playingIndex: playingIndex || undefined,
+              playingIndex:
+                typeof playingIndex === 'number' ? playingIndex : undefined,
               chordProps: {
                 keySignature,
               },

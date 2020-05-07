@@ -7,7 +7,6 @@ import TimelineSlot from './TimelineSlot';
 import ChordDisplay, {
   ChordDisplayProps,
   ChordButtonEvents,
-  ChordButtonEvent,
   mkChordEvents,
 } from './ChordDisplay';
 
@@ -28,7 +27,7 @@ const useStyles = makeStyles({
     gridTemplateColumns: '1fr 1fr 1fr 1fr',
     gridAutoRows: '1fr',
     alignItems: 'stretch',
-    gridGap: '2em 1.5em',
+    gridGap: '16px',
   },
 });
 
@@ -57,7 +56,12 @@ export const Timeline: React.FC<TimelineProps> = props => {
             key={i}
             onDelete={onDelete && (() => onDelete(chord, i))}
           >
-            <ChordDisplay chord={chord} {...chordProps} {...events} />
+            <ChordDisplay
+              chord={chord}
+              highlight={selected}
+              {...chordProps}
+              {...events}
+            />
           </TimelineSlot>
         );
       })}

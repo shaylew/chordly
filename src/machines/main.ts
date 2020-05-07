@@ -105,9 +105,9 @@ export const appConfig: MachineConfig<AppContext, AppSchema, AppEvent> = {
         onDone: 'idle',
         autoForward: false,
       },
-      onEntry: ['chordStart', send('PRESS', { to: 'button' })],
+      activities: ['playingChord'],
+      onEntry: [send('PRESS', { to: 'button' })],
       onExit: [
-        'chordStop',
         assign({
           playingChord: (_context, _event) => null,
           previousChord: (context, _event) => {
@@ -135,20 +135,29 @@ export const appConfig: MachineConfig<AppContext, AppSchema, AppEvent> = {
       },
     },
     playingSong: {
-      entry: [
-        'playbackStart',
+      activities: ['playingSong'],
+      onEntry: [
         assign({
           playingIndex: (_context, _event) => 0,
           previousChord: (_context, _event) => null,
+          playingChord: (context, _event) =>
+            context.song.measures[0]?.chord || null,
         }),
       ],
-      exit: ['playbackStop'],
+      onExit: [
+        assign({
+          playingIndex: (_context, _event) => null,
+          playingChord: (_context, _event) => null,
+        }),
+      ],
       on: {
         'PLAY.STOP': { target: 'idle' },
         'PLAY.FINISH': { target: 'idle' },
         'PLAY.PROGRESS': {
           actions: assign({
             playingIndex: (_context, event) => event.index,
+            playingChord: (context, event) =>
+              context.song.measures[event.index]?.chord || null,
             previousChord: (context, event) =>
               context.song.measures[event.index - 1]?.chord || null,
           }),

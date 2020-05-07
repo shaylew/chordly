@@ -55,7 +55,7 @@ const useChordStyles = makeStyles({
     gridAutoColumns: 'minmax(1.6em, 1fr)',
     gridTemplateRows: '[row1] 4fr [row2] 3fr',
     background: 'transparent', // 'var(--note-color-100)',
-    // border: 'solid var(--note-color-700) 2px',
+    // border: 'solid var(--note-color-500) 2px',
     alignItems: 'stretch',
     lineHeight: 'normal',
     color: 'var(--note-color-700)',

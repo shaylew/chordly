@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import clsx from 'clsx';
-import { ButtonBase, makeStyles } from '@material-ui/core';
+import { makeStyles } from '@material-ui/core';
 
 import { useNoteColors } from '../lib/colors';
 import {
@@ -32,15 +32,23 @@ export type NoteKeyProps = {
   root?: boolean; // is this key on the bottom tier
   inKey?: boolean; // is this note in the current key (if any)
   selected?: boolean; // is this note a selected chord part
-  resonating?: boolean; // is this note the same pitch class as a chord part
+  resonating?: 'previous' | 'current' | false;
   showAs?: 'ghost' | 'collapsed' | 'expanded';
   onClick?: React.MouseEventHandler;
 };
 
-const scaleTime = 0.5;
+const scaleTime = 0.8;
 const translucentTime = scaleTime / 2;
 const collapsedSize = 0.4;
-const standardTransition = `transform ${scaleTime}s ease-out, opacity ${translucentTime}s ease-out`;
+const standardDelay = 0;
+const standardTransition = [
+  `transform ${scaleTime}s ease-out ${standardDelay}s`,
+  `opacity ${translucentTime}s ease-out ${standardDelay}s`,
+].join(', ');
+const fastTransition = [
+  `transform ${scaleTime}s ease-out 0s`,
+  `opacity ${translucentTime}s ease-out 0s`,
+].join(', ');
 
 const useKeyStyles = makeStyles({
   expanded: {
@@ -59,9 +67,6 @@ const useKeyStyles = makeStyles({
     },
   },
   ghost: {
-    '& $circle': {
-      transform: 'scale(0.66)',
-    },
     '&:not($selected) $hexagon': {
       opacity: 0,
     },
@@ -94,21 +99,37 @@ const useKeyStyles = makeStyles({
   },
   inKey: {
     '&$collapsed $circle': {
-      opacity: 0.66,
+      // opacity: 0.66,
     },
   },
-  resonating: {
+  resonatingCurrent: {
     '& $circle': {
       opacity: 0.66,
+      // transform: `scale(0.6)`,
+      fill: 'var(--note-color-200)',
+    },
+  },
+  resonatingPrevious: {
+    '& $circle': {
+      opacity: 0.33,
+      // transform: `scale(0.4)`,
       fill: 'var(--note-color-200)',
     },
   },
   isRoot: {
     '& $hexagon': {
       opacity: 0.5,
+      transition: fastTransition,
+    },
+    '& $hexagonOverlay': {
+      transition: fastTransition,
     },
     '& $circle': {
       fill: 'var(--note-color-200)',
+      transition: fastTransition,
+    },
+    '& $circleOverlay': {
+      transition: fastTransition,
     },
   },
   shapeSvg: {
@@ -165,7 +186,7 @@ const NoteKey: React.FC<NoteKeyProps> = props => {
     root = false,
     selected = false,
     inKey = true,
-    resonating = false,
+    resonating,
     showAs = 'expanded',
     label = prettyName(pcToName(pitchClass)),
   } = props;
@@ -182,7 +203,8 @@ const NoteKey: React.FC<NoteKeyProps> = props => {
       [classes.selected]: selected,
       [classes.isRoot]: root,
       [classes.inKey]: inKey,
-      [classes.resonating]: resonating,
+      [classes.resonatingCurrent]: resonating === 'current',
+      [classes.resonatingPrevious]: resonating === 'previous',
     }),
     hexagon: classes.hexagon,
     hexagonOverlay: classes.hexagonOverlay,
@@ -207,7 +229,7 @@ export type KeyboardKeyProps = KeyboardProps & {
   pitchClass: PitchClass;
   level: number;
   index: number;
-  resonating?: boolean;
+  resonating?: 'previous' | 'current' | false;
   disabled?: boolean;
   onClick?: (pitchClass: PitchClass, level: number, index: number) => void;
 };
@@ -350,7 +372,8 @@ export const Keyboard: React.FC<KeyboardProps> = props => {
         <HexGridRow key={level}>
           <HexGridSpacer count={(levels.length - level - 1) / 2} />
           {pcs.map((pitchClass, index) => {
-            const resonating = !!resonatingChord?.includes(pitchClass);
+            const previous = !!resonatingChord?.includes(pitchClass);
+            const current = !!selectedChord?.includes(pitchClass);
             return (
               <KeyboardKey
                 key={index}
@@ -358,7 +381,7 @@ export const Keyboard: React.FC<KeyboardProps> = props => {
                 index={index}
                 pitchClass={pitchClass}
                 onClick={keyClick}
-                resonating={resonating}
+                resonating={(current && 'current') || (previous && 'previous')}
                 {...keyProps}
               />
             );
@@ -367,33 +390,6 @@ export const Keyboard: React.FC<KeyboardProps> = props => {
         </HexGridRow>
       ))}
     </HexGrid>
-  );
-};
-
-type KeyboardControllerProps = { keySignature?: Key };
-
-export const KeyboardController: React.FC<KeyboardControllerProps> = props => {
-  const [selectedRoot, setRoot] = useState(pitchClasses[0]);
-  const [selectedChord, setChord] = useState(Chord.major(selectedRoot));
-  const keySignature = props.keySignature || Key.major('C');
-
-  function onSelectChord(chord: Chord): void {
-    setRoot(chord.root);
-    setChord(chord);
-  }
-
-  return (
-    <div>
-      <Keyboard
-        {...{
-          selectedRoot,
-          selectedChord,
-          keySignature,
-          onSelectChord,
-          resonatingChord: selectedChord,
-        }}
-      />
-    </div>
   );
 };
 
