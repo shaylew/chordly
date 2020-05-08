@@ -1,157 +1,181 @@
 import React from 'react';
 import clsx from 'clsx';
 import {
-  makeStyles,
   createStyles,
   WithStyles,
   withStyles,
+  makeStyles,
 } from '@material-ui/core';
 
 import '../images/shapes.svg';
 
-export const hexagonHeight = 2 / Math.sqrt(3);
+export const hexagonHeight = Math.sqrt(3);
+export const hexagonAspectRatio = hexagonHeight / 2;
 
 const shapeStyles = createStyles({
-  root: {
-    position: 'relative',
-    flex: '1 1 0',
-    width: '100%',
-    marginTop: `${(-hexagonHeight / 4) * 100}%`,
-    marginBottom: `${(-hexagonHeight / 4) * 100}%`,
-    '&::before': {
-      content: '""',
-      display: 'block',
-      paddingBottom: `${hexagonHeight * 100}%`,
-    },
-  },
-  shapeSvg: {
-    display: 'block',
-    position: 'absolute',
-    pointerEvents: 'none',
-    top: '0',
-    left: '0',
-    vectorEffect: 'non-scaling-stroke',
+  root: {},
+  hexagonEdge: {
+    // vectorEffect: 'non-scaling-stroke',
+    stroke: 'none',
+    fill: 'none',
   },
   hexagon: {
-    pointerEvents: 'visible',
-    strokeLinejoin: 'round',
-    vectorEffect: 'non-scaling-stroke',
+    // vectorEffect: 'non-scaling-stroke',
+    stroke: 'none',
+    fill: 'none',
   },
   hexagonOverlay: {
-    pointerEvents: 'none',
-    opacity: 0,
-    strokeLinejoin: 'round',
-    vectorEffect: 'non-scaling-stroke',
+    // vectorEffect: 'non-scaling-stroke',
+    stroke: 'none',
+    fill: 'none',
   },
+  allHexagons: {},
   circle: {
-    pointerEvents: 'visible',
-    strokeLinejoin: 'round',
-    vectorEffect: 'non-scaling-stroke',
+    // vectorEffect: 'non-scaling-stroke',
+    stroke: 'none',
+    fill: 'none',
   },
   circleOverlay: {
     pointerEvents: 'none',
-    opacity: 0,
+    stroke: 'none',
+    fill: 'none',
   },
-  content: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    clipPath: 'url(#shapes_hexagonClip)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  content: {},
 });
 
 export type ShapeClasses = WithStyles<typeof shapeStyles>;
-export type ShapeProps = React.ComponentProps<'div'>;
+export type ShapeProps = React.ComponentProps<'g'>;
 type AllShapeProps = ShapeClasses & ShapeProps;
 
 const ShapeRaw: React.FC<AllShapeProps> = props => {
   const { className, classes, ...rest } = props;
 
   return (
-    <div className={clsx([classes.root, className])} {...rest}>
-      <svg viewBox="-87 -100 174 200" className={classes.shapeSvg}>
-        <g clipPath={`url(#shapes_hexagonClip)`}>
-          <use href={`#shapes_hexagon`} className={classes.hexagon} />
-          <use
-            href={`#shapes_hexagon`}
-            className={clsx(classes.hexagonOverlay)}
-          />
-        </g>
-        <g clipPath={`url(#shapes_circleClip)`}>
-          <use href={`#shapes_circle`} className={classes.circle} />
-          <use
-            href={`#shapes_circle`}
-            className={clsx(classes.circle, classes.circleOverlay)}
-          />
-        </g>
-      </svg>
-      <div className={classes.content}>{props.children}</div>
-    </div>
+    <g className={clsx([classes.root, className])} {...rest}>
+      <use
+        href="#shapes_hexagon"
+        clipPath="url(#shapes_hexagonClip)"
+        className={clsx(classes.allHexagons, classes.hexagon)}
+      />
+      <use
+        href="#shapes_hexagon"
+        clipPath="url(#shapes_hexagonClip)"
+        className={clsx(classes.allHexagons, classes.hexagonOverlay)}
+      />
+      <use
+        href="#shapes_circle"
+        clipPath="url(#shapes_circleClip)"
+        className={classes.circle}
+      />
+      <use
+        href="#shapes_circle"
+        clipPath="url(#shapes_circleClip)"
+        className={clsx(classes.circle, classes.circleOverlay)}
+      />
+      <g clipPath="url(#shapes_hexagonClip)" className={classes.content}>
+        {props.children}
+      </g>
+      <use
+        href="#shapes_hexagon"
+        className={clsx(classes.allHexagons, classes.hexagonEdge)}
+      />
+    </g>
   );
 };
 
 export const Shape = withStyles(shapeStyles)(ShapeRaw);
 
-const useHexGridStyles = makeStyles({
-  grid: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  row: {
-    pointerEvents: 'none',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+const useGridStyles = makeStyles({
   wrapper: {
-    flex: '1 1 0',
+    height: '100%',
+    width: '100%',
     position: 'relative',
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    '&::before': {
-      flex: '0 0 0',
-      content: '""',
-      display: 'block',
-      paddingBottom: `${100 / hexagonHeight}%`,
-    },
+  },
+  layerSvg: {
+    display: 'block',
+    position: 'absolute',
+    // top: 0,
+    // left: 0,
+    // bottom: 0,
+    // right: 0,
+    height: '100%',
+    width: '100%',
+    pointerEvents: 'none',
+    willChange: 'opacity',
+  },
+  spacerSvg: {
+    display: 'none',
+    height: '100%',
+    width: 'auto',
   },
 });
 
-export const HexGrid: React.FC<React.ComponentProps<'div'>> = props => {
-  const classes = useHexGridStyles();
-  return (
-    <div {...props} className={clsx([classes.grid, props.className])}>
-      {props.children}
-    </div>
-  );
+export type SVGGridChild = {
+  row: number;
+  col: number;
+  layers: Record<string, JSX.Element>;
 };
 
-export const HexGridRow: React.FC = props => {
-  const classes = useHexGridStyles();
-  return <div className={classes.row}>{props.children}</div>;
-};
+export type SVGGridProps = {
+  rows: number;
+  cols: number;
+  children: SVGGridChild[];
+  layerOrder?: string[];
+} & React.ComponentProps<'svg'>;
 
-export type HexRowSpacerProps = { count: number };
-export const HexGridSpacer: React.FC<HexRowSpacerProps> = props => {
-  return <div style={{ flex: `${props.count} ${props.count} 0` }} />;
-};
+export const SVGGrid: React.FC<SVGGridProps> = props => {
+  const { rows, cols, children, ...rest } = props;
 
-export type HexGridItemProps = React.ComponentProps<'div'>;
+  const classes = useGridStyles();
 
-export const HexGridItem: React.FC<HexGridItemProps> = props => {
-  const { children, ...rest } = props;
-  const classes = useHexGridStyles();
+  const xstride = 3 / 4;
+  const ystride = Math.sqrt(3) / 2;
+
+  const x0 = -xstride;
+  const y0 = -ystride * 0.5;
+  const w = (cols + 1) * xstride;
+  const h = (rows + 0.5) * ystride;
+  const viewBox = `${x0} ${y0} ${w} ${h}`;
+
+  const byLayer: Record<string, JSX.Element[]> = {};
+  children.forEach(({ row, col, layers }) => {
+    for (const layer in layers) {
+      const x = xstride * col;
+      const y = ystride * row;
+      const el = (
+        <g key={`${row}-${col}`} transform={`translate(${x} ${y})`}>
+          {layers[layer]}
+        </g>
+      );
+      byLayer[layer] = byLayer[layer] || [];
+      byLayer[layer].push(el);
+    }
+  });
+
+  const layerOrder = props.layerOrder || Object.keys(byLayer);
+  const svgLayers = layerOrder.map(layer => {
+    const items = byLayer[layer];
+    return !items ? null : (
+      <svg
+        key={layer}
+        className={classes.layerSvg}
+        preserveAspectRatio="xMidYMid meet"
+        viewBox={viewBox}
+      >
+        {items}
+      </svg>
+    );
+  });
 
   return (
     <div className={classes.wrapper}>
-      <div {...rest}>{children}</div>
+      {/* <svg
+        className={classes.spacerSvg}
+        preserveAspectRatio="xMidYMid meet"
+        viewBox={viewBox}
+        {...rest}
+      ></svg> */}
+      {svgLayers}
     </div>
   );
 };

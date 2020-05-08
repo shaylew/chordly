@@ -1,22 +1,20 @@
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
+import { EventObject } from 'xstate';
 
-import { Key, Song, Chord } from '../types';
+import { Song, Chord } from '../types';
+import { ChordButtonInterpreter } from '../machines/types';
 import TimelineProgress from './TimelineProgress';
 import TimelineSlot from './TimelineSlot';
-import ChordDisplay, {
-  ChordDisplayProps,
-  ChordButtonEvents,
-  mkChordEvents,
-} from './ChordDisplay';
+import ChordButton, { ChordButtonProps } from './ChordButton';
 
-export type TimelineProps = {
+export type TimelineProps<TEvent extends EventObject> = {
   song: Song;
   playing?: boolean;
   playingIndex?: number;
   onDelete?: (chord: Chord, index: number) => void;
-  chordProps: Partial<ChordDisplayProps>;
-  chordEvents: ChordButtonEvents<number>;
+  chordProps: Partial<ChordButtonProps<TEvent>>;
+  service?: ChordButtonInterpreter<TEvent>;
 };
 
 const useStyles = makeStyles({
@@ -31,15 +29,10 @@ const useStyles = makeStyles({
   },
 });
 
-export const Timeline: React.FC<TimelineProps> = props => {
-  const {
-    song,
-    onDelete,
-    playing,
-    playingIndex,
-    chordProps,
-    chordEvents,
-  } = props;
+export function Timeline<T extends EventObject>(
+  props: TimelineProps<T>,
+): JSX.Element {
+  const { song, onDelete, playing, playingIndex, chordProps, service } = props;
   const totalBars = song.measures.length;
 
   const classes = useStyles();
@@ -50,23 +43,22 @@ export const Timeline: React.FC<TimelineProps> = props => {
       {song.measures.map((measure, i) => {
         const selected = i === playingIndex;
         const chord = measure.chord;
-        const events = mkChordEvents(chordEvents, chord, i);
         return (
           <TimelineSlot
             key={i}
             onDelete={onDelete && (() => onDelete(chord, i))}
           >
-            <ChordDisplay
+            <ChordButton
               chord={chord}
               highlight={selected}
+              service={service}
               {...chordProps}
-              {...events}
             />
           </TimelineSlot>
         );
       })}
     </div>
   );
-};
+}
 
 export default Timeline;

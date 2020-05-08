@@ -1,17 +1,26 @@
-import React, { useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { useMachine } from '@xstate/react';
 import * as Tone from 'tone';
 
-import { Grid, Card, CardContent } from '@material-ui/core';
+import {
+  makeStyles,
+  Grid,
+  Card,
+  CardContent,
+  Container,
+  Typography,
+  Theme,
+} from '@material-ui/core';
 
-import { Song, Chord, Key } from '../types';
-// import ChordGrid from './ChordGrid';
-import Keyboard from './Keyboard';
-import SelectedChord from './SelectedChord';
-import SongCard from './SongCard';
+import { Song, Chord, Key, pitchClasses } from '../types';
 import usePlayer from './PlayerContext';
-import appMachine from '../machines/main';
+import appMachine, { AppContext, AppEvent } from '../machines/main';
+import { KeyboardInterpreter } from '../machines/keyboard';
+import Sidebar from './Sidebar';
+import SongCard from './SongCard';
 import Timeline from './Timeline';
+import KeySelect from './KeySelect';
+import { ChordButtonInterpreter } from '../machines/types';
 
 const defaultSong: Song = {
   bpm: 240,
@@ -27,24 +36,35 @@ const defaultSong: Song = {
   ].map(chord => ({ chord })),
 };
 
+const useStyles = makeStyles((theme: Theme) => ({
+  root: {
+    display: 'flex',
+    alignItems: 'stretch',
+    position: 'relative',
+  },
+  content: {
+    flex: '1 1 0',
+    background: theme.palette.background.default,
+  },
+}));
+
 export const App: React.FC = () => {
   const player = usePlayer();
 
-  const [current, send] = useMachine(appMachine, {
+  const [current, send, mainService] = useMachine(appMachine, {
     context: {
-      keySignature: Key.major('C', 'sharp'),
+      keySignature: Key.chromatic('C', 'sharp'),
       song: defaultSong,
+      player: player,
     },
     activities: {
-      playingChord: (context, _activity) => {
-        const chord = context.playingChord;
-        if (chord) {
-          player?.triggerChordStart(chord);
-          return () => player?.triggerChordEnd(chord);
+      playingChord: ({ playingChord }, _activity) => {
+        if (playingChord) {
+          player?.triggerChordStart(playingChord);
+          return () => player?.triggerChordEnd(playingChord);
         }
       },
-      playingSong: (context, _activity) => {
-        const song = context.song;
+      playingSong: ({ song }, _activity) => {
         if (song) {
           player?.playSong(song, {
             onMeasure: index => send({ type: 'PLAY.PROGRESS', index }),
@@ -56,19 +76,26 @@ export const App: React.FC = () => {
     },
   });
 
-  const playing = current.matches('playingSong');
+  const child = mainService.children.get('keyboard');
+  const keyboardService = (child as unknown) as KeyboardInterpreter;
+  const buttonService = (mainService as unknown) as ChordButtonInterpreter;
+
+  const playingSong = current.matches('playingSong');
+  const playingButtonChord = current.matches('playingChord');
   const {
     keySignature,
     selectedChord,
-    previousChord,
-    playingChord,
     playingIndex,
+    playingChord,
     song,
   } = current.context;
 
-  const onSelectChord = (chord: Chord): void => {
-    send({ type: 'CHORD.SELECT', chord });
-  };
+  const onSelectChord = useCallback(
+    (chord: Chord) => {
+      send({ type: 'SET.CHORD', chord });
+    },
+    [send],
+  );
 
   const onChordAdd = (): void => {
     if (selectedChord) {
@@ -81,69 +108,57 @@ export const App: React.FC = () => {
   };
 
   const onTogglePlay = (): void => {
+    // It has to be here, or the indirection will make the browser forget
+    // the sound playing was initiated by a user action!
     Tone.start();
-    !playing ? send('PLAY.START') : send('PLAY.STOP');
+    !playingSong ? send('PLAY.START') : send('PLAY.STOP');
   };
 
-  const chordButtonEvents = {
-    onClick: (chord: Chord) => send({ type: 'CHORD.CLICK', chord }),
-    onMouseDown: (chord: Chord) => send({ type: 'CHORD.PRESS', chord }),
-    onMouseUp: (chord: Chord) => send({ type: 'CHORD.RELEASE', chord }),
-    onMouseLeave: (chord: Chord) => send({ type: 'CHORD.RELEASE', chord }),
-  };
+  const classes = useStyles();
 
   return (
-    <Grid container spacing={4}>
-      <Grid item xs={12}>
-        <SongCard
-          {...{
-            playing,
-            looping: false,
-            onTogglePlay,
-            // onToggleLoop,
-            // timelineMachine,
-          }}
-        >
-          <Timeline
-            {...{
-              song,
-              onDelete: onChordDelete,
-              playingIndex:
-                typeof playingIndex === 'number' ? playingIndex : undefined,
-              chordProps: {
-                keySignature,
-              },
-              chordEvents: chordButtonEvents,
-            }}
-          />
-        </SongCard>
-      </Grid>
-      <Grid item xs={12}>
-        <Card raised>
-          <CardContent>
-            <SelectedChord
-              chord={selectedChord || undefined}
-              keySignature={keySignature}
-              onChordAdd={onChordAdd}
-              chordEvents={chordButtonEvents}
-            />
-          </CardContent>
-        </Card>
-      </Grid>
-      <Grid item xs={12}>
-        <Card raised>
-          <CardContent>
-            <Keyboard
-              keySignature={keySignature}
-              selectedChord={playingChord || selectedChord || undefined}
-              resonatingChord={previousChord || undefined}
-              onSelectChord={onSelectChord}
-              disabled={!!playingChord}
-            />
-          </CardContent>
-        </Card>
-      </Grid>
-    </Grid>
+    <div className={classes.root}>
+      {keyboardService && (
+        <Sidebar
+          keyboardService={keyboardService}
+          buttonService={buttonService}
+          keyboardDisabled={playingButtonChord || playingSong}
+        />
+      )}
+      <div className={classes.content}>
+        <Container>
+          <Typography variant="h1">Chord ily</Typography>
+          <Grid container spacing={4}>
+            <Grid item xs={12}>
+              <Card>
+                <CardContent>
+                  <KeySelect service={mainService} />
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12}>
+              <SongCard playing={playingSong} onTogglePlay={onTogglePlay}>
+                <Timeline
+                  {...{
+                    song,
+                    service: buttonService,
+                    onDelete: onChordDelete,
+                    playingIndex:
+                      typeof playingIndex === 'number'
+                        ? playingIndex
+                        : undefined,
+                    chordProps: {
+                      keySignature,
+                    },
+                  }}
+                />
+              </SongCard>
+            </Grid>
+          </Grid>
+        </Container>
+      </div>
+    </div>
   );
 };
 

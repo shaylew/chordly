@@ -4,7 +4,7 @@ import { ToneTime, ToneSynth, Song, Chord } from '../types';
 import { Monophonic } from 'tone/build/esm/instrument/Monophonic';
 
 function toNotes(chord: Chord): Array<string> {
-  return chord.notes.map(n => n.toString());
+  return [...chord.notes.map(n => n.toString())];
 }
 
 function mkSynth(): ToneSynth {
@@ -40,12 +40,17 @@ export class Player {
   }
 
   triggerChordStart(chord: Chord, time?: ToneTime, velocity?: number): this {
-    this.buttonSynth.triggerAttack(toNotes(chord), time, velocity);
+    this.silenceSynth(this.buttonSynth);
+    const baseTime = Tone.Time(time);
+    toNotes(chord).forEach((note, i) => {
+      const startTime = baseTime.valueOf() + Tone.Time('16n').valueOf() * i;
+      this.buttonSynth.triggerAttack([note], startTime, velocity);
+    });
     return this;
   }
 
   triggerChordEnd(chord: Chord, time?: ToneTime): this {
-    this.buttonSynth.triggerRelease(toNotes(chord), time);
+    this.silenceSynth(this.buttonSynth);
     return this;
   }
 
@@ -80,26 +85,17 @@ export class Player {
     Tone.Transport.start();
   }
 
-  stopSong(): void {
+  silenceSynth(synth: ToneSynth): void {
     // Workaround for a tone.js bug -- .releaseAll doesn't cut it.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (this.songSynth as any)._voices.forEach((v: Monophonic<any>) => {
+    (synth as any)._voices.forEach((v: Monophonic<any>) => {
       v.triggerRelease();
     });
-    Tone.Transport.stop();
   }
 
-  setLoop(loop: boolean): void {
-    if (!this.song) {
-      return;
-    }
-
-    if (loop) {
-      const songEnd = `${this.song.measures.length}:0:1`;
-      Tone.Transport.setLoopPoints(0, songEnd);
-    }
-
-    Tone.Transport.loop = loop;
+  stopSong(): void {
+    this.silenceSynth(this.songSynth);
+    Tone.Transport.stop();
   }
 
   dispose(): void {
@@ -107,3 +103,5 @@ export class Player {
     this.buttonSynth.dispose();
   }
 }
+
+export default Player;

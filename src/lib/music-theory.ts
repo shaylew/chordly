@@ -5,12 +5,16 @@ export type Accidental = 'sharp' | 'flat';
 
 export type Octave = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
-function positiveModulo(x: number, r: number): number {
+export function positiveModulo(x: number, r: number): number {
   return ((x % r) + r) % r;
 }
 
 export function transpose(pc: PitchClass, interval: Interval): PitchClass {
   return positiveModulo(pc + interval, 12) as PitchClass;
+}
+
+export function stepsAbove(low: PitchClass, high: PitchClass): Interval {
+  return positiveModulo(high - low, 12);
 }
 
 // prettier-ignore
@@ -28,10 +32,21 @@ export const namesFlat: NoteName[] =
 // prettier-ignore
 export const keyNames: NoteName[] =
   ['C', 'G', 'D', 'A', 'E', 'B', 'Gb', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
+// prettier-ignore
+export const romanNumerals: string[] =
+  ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 
 // prettier-ignore
 export const pitchClasses: PitchClass[] =
   [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+
+export function isPitchClass(pc: unknown): pc is PitchClass {
+  return typeof pc === 'number' && 0 <= pc && pc <= 11;
+}
+
+export const circleOfFifths: PitchClass[] = pitchClasses.map((_, i) =>
+  transpose(0, 7 * i),
+);
 
 // prettier-ignore
 const _nameToPC: Record<NoteName, PitchClass> = {
@@ -65,7 +80,13 @@ export function nameToPC(name: NoteName): PitchClass {
   return _nameToPC[name];
 }
 
-export function prettyName(name: NoteName): string {
+export function prettyName(
+  name: PitchClassOrName,
+  accidentals: Accidental = 'flat',
+): string {
+  if (typeof name === 'number') {
+    name = pcToName(name, accidentals);
+  }
   return name.replace('#', '♯').replace('b', '♭');
 }
 
@@ -88,7 +109,7 @@ export class Note {
   }
 }
 
-export type IntervalName = 'third' | 'fifth' | 'seventh' | 'ninth';
+export type FactorName = 'third' | 'fifth' | 'seventh' | 'ninth' | 'eleventh';
 export type IntervalType =
   //  | 'sus2'
   | 'minor'
@@ -98,11 +119,12 @@ export type IntervalType =
   | 'perfect'
   | 'augmented';
 
-export const intervalNames: IntervalArray<IntervalName> = [
+export const factorNames: FactorArray<FactorName> = [
   'third',
   'fifth',
   'seventh',
   'ninth',
+  'eleventh',
 ];
 
 export const intervalTypes: IntervalType[] = [
@@ -113,26 +135,32 @@ export const intervalTypes: IntervalType[] = [
   'augmented',
 ];
 
-export type IntervalInfo = { semitones?: number; symbol: string; name: string };
+export type IntervalInfo = {
+  semitones?: number;
+  symbol: string;
+  name: IntervalType | 'none';
+};
 
-export type IntervalIndex = 0 | 1 | 2 | 3;
-export const I: Record<IntervalName, IntervalIndex> = {
+export type FactorIndex = 0 | 1 | 2 | 3 | 4;
+export const I: Record<FactorName, FactorIndex> = {
   third: 0,
   fifth: 1,
   seventh: 2,
   ninth: 3,
+  eleventh: 4,
 };
 
-export const N: IntervalArray<IntervalName> = [
+export const N: FactorArray<FactorName> = [
   'third',
   'fifth',
   'seventh',
   'ninth',
+  'eleventh',
 ];
 
-export type IntervalArray<T> = [T, T, T, T];
+export type FactorArray<T> = [T, T, T, T, T];
 
-export const namedIntervals: IntervalArray<Record<'none', IntervalInfo> &
+export const namedIntervals: FactorArray<Record<'none', IntervalInfo> &
   Partial<Record<IntervalType, IntervalInfo>>> = [
   {
     // thirds
@@ -160,55 +188,91 @@ export const namedIntervals: IntervalArray<Record<'none', IntervalInfo> &
     minor: { semitones: 13, symbol: '♭9', name: 'minor' },
     major: { semitones: 14, symbol: '9', name: 'major' },
   },
+  {
+    // elevenths
+    none: { symbol: '', name: 'none' },
+    perfect: { semitones: 17, symbol: '11', name: 'perfect' },
+  },
 ];
 
+export const intervalBySemitones: Partial<Record<
+  Interval,
+  IntervalInfo & { factor: FactorName }
+>> = {};
+namedIntervals.forEach((infos, i) => {
+  const factor = factorNames[i];
+  Object.values(infos).forEach(info => {
+    if (info?.semitones) {
+      intervalBySemitones[info.semitones] = { ...info, factor };
+    }
+  });
+});
+
 export const namedTriads: ReadonlyArray<Partial<
-  Record<'name' | IntervalName, IntervalType>
+  Record<'name' | FactorName, IntervalType>
 >> = [
   { name: 'major', third: 'major', fifth: 'perfect' },
   { name: 'minor', third: 'minor', fifth: 'perfect' },
-  // { name: 'augmented', third: 'major', fifth: 'augmented' },
-  // { name: 'diminished', third: 'minor', fifth: 'diminished' },
+  { name: 'augmented', third: 'major', fifth: 'augmented' },
+  { name: 'diminished', third: 'minor', fifth: 'diminished' },
 ];
 
 // Occasionally you just want less structure than this,
 // when you're not being generic over intervals.
 export const MINOR_THIRD = 3;
 export const MAJOR_THIRD = 4;
-export const FIFTH = 7;
+export const PERFECT_FIFTH = 7;
 
 export type NamedIntervals = typeof namedIntervals;
 
-export type Quality<A extends IntervalName> = keyof NamedIntervals[typeof I[A]];
+export type Quality<A extends FactorName> = keyof NamedIntervals[typeof I[A]];
 
 export function identifyInterval(
   interval: Interval,
-  name: IntervalName,
+  factor: FactorName,
 ): IntervalType | undefined {
-  const section = namedIntervals[I[name]];
-  for (const t of intervalTypes) {
-    if (section[t]?.semitones === interval) {
-      return t;
-    }
+  const section = intervalBySemitones[interval];
+  if (section && section.factor === factor && section.name !== 'none') {
+    return section.name;
   }
+}
+
+export function isLegalFactor(
+  root: PitchClass,
+  other: PitchClass,
+  factor?: FactorIndex | FactorName | number,
+): boolean {
+  const interval = stepsAbove(root, other);
+  if (factor === undefined) {
+    return !!intervalBySemitones[interval];
+  } else if (typeof factor === 'number') {
+    factor = factorNames[factor];
+  }
+
+  return (
+    intervalBySemitones[interval]?.factor === factor ||
+    intervalBySemitones[interval + 12]?.factor === factor
+  );
 }
 
 export type Extension = {
   seventh?: Quality<'seventh'>;
   ninth?: Quality<'ninth'>;
+  eleventh?: Quality<'eleventh'>;
 };
 
 export type ChordParts = {
-  readonly [K in IntervalName]: Quality<K>;
+  readonly [K in FactorName]: Quality<K>;
 };
 
-export type PartsInfo = IntervalArray<IntervalInfo>;
+export type PartsInfo = FactorArray<IntervalInfo>;
 
 const noParts: ChordParts = {
   third: 'none',
   fifth: 'none',
   seventh: 'none',
   ninth: 'none',
+  eleventh: 'none',
 };
 
 const noInfo: PartsInfo = [
@@ -216,12 +280,14 @@ const noInfo: PartsInfo = [
   namedIntervals[1].none,
   namedIntervals[2].none,
   namedIntervals[3].none,
+  namedIntervals[4].none,
 ];
 
 export class ChordType {
   readonly info: PartsInfo;
   readonly parts: ChordParts;
 
+  readonly symbols: string[];
   readonly symbol: string;
   readonly length: number;
   readonly intervals: Array<Interval>;
@@ -232,21 +298,22 @@ export class ChordType {
     this.info = noInfo.slice() as typeof noInfo;
 
     let length = 0;
-    let symbols = '';
+    const symbols: string[] = [];
     const intervals = [0];
 
-    intervalNames.forEach((name, i) => {
+    factorNames.forEach((name, i) => {
       const part = this.parts[name];
       this.info[i] = namedIntervals[i][part] || namedIntervals[i].none;
       const { semitones, symbol } = this.info[i];
       if (semitones) {
         length++;
-        symbols += symbol;
+        symbols.push(symbol);
         intervals.push(semitones);
       }
     });
     this.length = length;
-    this.symbol = symbols;
+    this.symbols = symbols;
+    this.symbol = symbols.join('');
     this.intervals = intervals;
   }
 
@@ -299,55 +366,6 @@ export class ChordType {
 export type ChordTypeName = keyof typeof ChordType.names;
 export type ChordTypeOrName = ChordType | ChordTypeName;
 
-export class Key {
-  readonly tonic: PitchClass;
-
-  private constructor(
-    readonly name: string,
-    tonic: PitchClassOrName,
-    readonly notes: Array<PitchClass>,
-    readonly accidentals: Accidental = 'flat',
-  ) {
-    this.tonic = toPitchClass(tonic);
-  }
-
-  noteName(pcOrName: PitchClassOrName): string {
-    const pc = typeof pcOrName === 'number' ? pcOrName : nameToPC(pcOrName);
-    return prettyName(pcToName(pc, this.accidentals));
-  }
-
-  static fromScale(
-    name: string,
-    tonic: PitchClassOrName,
-    scale: Array<Interval>,
-    accidentals?: Accidental,
-  ): Key {
-    const pc = toPitchClass(tonic);
-    const notes = scale.map(i => transpose(pc, i));
-    return new Key(name, tonic, notes, accidentals);
-  }
-
-  static major(tonic: PitchClassOrName, accidentals?: Accidental): Key {
-    return Key.fromScale('major', tonic, [0, 2, 4, 5, 7, 9, 11], accidentals);
-  }
-
-  static minor(tonic: PitchClassOrName, accidentals?: Accidental): Key {
-    return Key.fromScale('minor', tonic, [0, 2, 3, 5, 7, 9, 11], accidentals);
-  }
-
-  static chromatic(tonic: PitchClassOrName, accidentals?: Accidental): Key {
-    return Key.fromScale('chromatic', tonic, pitchClasses, accidentals);
-  }
-
-  includes(element: PitchClassOrName | Chord): boolean {
-    if (typeof element === 'object') {
-      return element.pitches.every(pc => this.notes.includes(pc));
-    } else {
-      return this.notes.includes(toPitchClass(element));
-    }
-  }
-}
-
 export type Voicing = {
   octave: Octave;
   inversion: number;
@@ -379,13 +397,14 @@ export class Chord {
     this.notes = voicedIntervals.map(i => this.rootNote.transpose(i));
   }
 
-  name(accidental: Accidental = 'flat'): string {
+  nameParts(accidental: Accidental = 'flat'): string[] {
     const letter = pcToName(this.root, accidental);
-    const symbol = this.type.symbol;
-    const intervals = this.type.inversion(this.voicing.inversion);
-    const base = transpose(this.root, intervals[0]);
-    const slash = base === this.root ? '' : '/' + pcToName(base, accidental);
-    return `${letter}${symbol}${slash}`;
+    const symbols = this.type.symbols;
+    return [letter, ...symbols];
+  }
+
+  name(accidental: Accidental = 'flat'): string {
+    return this.nameParts(accidental).join('');
   }
 
   includes(pc: PitchClassOrName): boolean {
@@ -399,7 +418,7 @@ export class Chord {
   tertianAltered(parts: Partial<ChordParts>, key?: Key): Chord {
     // all tertian intervals
     const valid = new Set<Interval>();
-    intervalNames.forEach(name => {
+    factorNames.forEach(name => {
       intervalTypes.forEach(type => {
         const semitones = namedIntervals[I[name]][type]?.semitones;
         if (semitones) valid.add(semitones);
@@ -407,12 +426,12 @@ export class Chord {
     });
 
     // intervals we've chosen to be in the new chord
-    const newParts: Partial<Record<IntervalName, IntervalType | 'none'>> = {};
+    const newParts: Partial<Record<FactorName, IntervalType | 'none'>> = {};
 
     // all intervals compatible with what we've already chosen
     let reachable = Array.from(valid.keys());
 
-    function choose(name: IntervalName, type: IntervalType | 'none'): void {
+    function choose(name: FactorName, type: IntervalType | 'none'): void {
       newParts[name] = type;
       const info = namedIntervals[I[name]][type];
       const factor = info && info.semitones;
@@ -425,7 +444,7 @@ export class Chord {
     }
 
     // include all the required chord factors
-    intervalNames.forEach(name => {
+    factorNames.forEach(name => {
       const part = parts[name];
       if (part) {
         choose(name, part);
@@ -433,17 +452,15 @@ export class Chord {
     });
 
     const highestFactor = Math.max(
-      ...intervalNames.map((n, i) => (this.type.parts[n] !== 'none' ? i : -1)),
+      ...factorNames.map((n, i) => (this.type.parts[n] !== 'none' ? i : -1)),
     );
 
     const highestNew = Math.max(
-      ...intervalNames.map((n, i) =>
-        parts[n] && parts[n] !== 'none' ? i : -1,
-      ),
+      ...factorNames.map((n, i) => (parts[n] && parts[n] !== 'none' ? i : -1)),
     );
 
     // reconstruct the rest of the chord, changing as little as possible
-    intervalNames.forEach((name, i) => {
+    factorNames.forEach((name, i) => {
       if (newParts[name]) {
         return; // we've already added this
       }
@@ -493,4 +510,100 @@ export class Chord {
   static augmented = Chord.defineNamed('augmented');
 }
 
-eval('if (this.alert) this.Chord = Chord');
+export type KeyType = 'major' | 'minor' | 'chromatic';
+export const keyTypes: KeyType[] = ['major', 'minor', 'chromatic'];
+
+export function isKeyType(type: unknown): type is KeyType {
+  return typeof type === 'string' && keyTypes.includes(type as KeyType);
+}
+
+export class Key {
+  readonly tonic: PitchClass;
+
+  private constructor(
+    readonly type: KeyType,
+    tonic: PitchClassOrName,
+    readonly notes: Array<PitchClass>,
+    readonly accidentals: Accidental = 'flat',
+  ) {
+    this.tonic = toPitchClass(tonic);
+  }
+
+  noteName(pcOrName: PitchClassOrName): string {
+    const pc = typeof pcOrName === 'number' ? pcOrName : nameToPC(pcOrName);
+    return prettyName(pcToName(pc, this.accidentals));
+  }
+
+  chordNumeral(chord: Chord): string {
+    let index = this.notes.indexOf(chord.root);
+    let prefix = '';
+    if (index === -1) {
+      prefix = '♭';
+      index = this.notes.indexOf(transpose(chord.root, 1));
+
+      if (index === -1) {
+        return '???';
+      }
+    }
+    const numeral = romanNumerals[index];
+    const casedNumeral =
+      chord.type.parts.third === 'minor'
+        ? numeral.toLowerCase()
+        : numeral.toUpperCase();
+    const suffix = chord.type.parts.fifth === 'diminished' ? '⁰' : '';
+    return `${prefix}${casedNumeral}${suffix}`;
+  }
+
+  naturalChord(degree: number): Chord {
+    const firstIx = positiveModulo(degree - 1, this.notes.length);
+    const thirdIx = (firstIx + 2) % this.notes.length;
+    const fifthIx = (thirdIx + 2) % this.notes.length;
+    const [first, third, fifth] = [firstIx, thirdIx, fifthIx].map(
+      i => this.notes[i],
+    );
+    const type = new ChordType({
+      third: identifyInterval(stepsAbove(first, third), 'third'),
+      fifth: identifyInterval(stepsAbove(first, fifth), 'fifth'),
+    });
+    return new Chord(first, type);
+  }
+
+  static fromScale(
+    type: KeyType,
+    tonic: PitchClassOrName,
+    scale: Array<Interval>,
+    accidentals?: Accidental,
+  ): Key {
+    const pc = toPitchClass(tonic);
+    const notes = scale.map(i => transpose(pc, i));
+    return new Key(type, tonic, notes, accidentals);
+  }
+
+  static named(
+    type: 'major' | 'minor' | 'chromatic',
+    tonic: PitchClassOrName,
+    accidentals?: Accidental,
+  ): Key {
+    return Key[type](tonic, accidentals);
+  }
+
+  static major(tonic: PitchClassOrName, accidentals?: Accidental): Key {
+    return Key.fromScale('major', tonic, [0, 2, 4, 5, 7, 9, 11], accidentals);
+  }
+
+  static minor(tonic: PitchClassOrName, accidentals?: Accidental): Key {
+    return Key.fromScale('minor', tonic, [0, 2, 3, 5, 7, 9, 11], accidentals);
+  }
+
+  static chromatic(tonic: PitchClassOrName, accidentals?: Accidental): Key {
+    return Key.fromScale('chromatic', tonic, pitchClasses, accidentals);
+  }
+
+  includes(element: PitchClassOrName | Chord): boolean {
+    if (typeof element === 'object') {
+      return element.pitches.every(pc => this.notes.includes(pc));
+    } else {
+      return this.notes.includes(toPitchClass(element));
+    }
+  }
+}
