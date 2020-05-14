@@ -43,6 +43,12 @@ const useStyles = makeStyles((theme: Theme) => ({
     flex: '1 1 0',
     background: theme.palette.background.default,
   },
+  footer: {
+    position: 'absolute',
+    bottom: theme.spacing(1),
+    right: theme.spacing(1),
+    textAlign: 'right',
+  },
 }));
 
 export const App: React.FC = () => {
@@ -117,7 +123,7 @@ export const App: React.FC = () => {
       )}
       <div className={classes.content}>
         <Container>
-          <Typography variant="h1">Chord ily</Typography>
+          <Typography variant="h1">Chordly</Typography>
           <Grid container spacing={4}>
             <Grid item xs={12}>
               <KeySelect
@@ -142,6 +148,12 @@ export const App: React.FC = () => {
             </Grid>
           </Grid>
         </Container>
+      </div>
+      <div className={classes.footer}>
+        <Typography variant="caption">
+          by <a href="https://github.com/shaylew">Shay Lewis</a> / code on{' '}
+          <a href="https://github.com/shaylew/chordly">github</a>
+        </Typography>
       </div>
     </div>
   );
