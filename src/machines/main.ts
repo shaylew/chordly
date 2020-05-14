@@ -1,12 +1,12 @@
 import {
   Machine,
   MachineConfig,
-  assign as coreAssign,
-  send,
   StateSchema,
   Assigner,
   PropertyAssigner,
   AssignAction,
+  send,
+  assign as coreAssign,
 } from 'xstate';
 
 import { Song, Chord, Key } from '../types';
@@ -103,6 +103,11 @@ export const appConfig: MachineConfig<AppContext, AppSchema, AppEvent> = {
 
         playingChordShort: {
           activities: ['playingChord'],
+          onEntry: [
+            assign({
+              playingChord: (c, _e) => c.selectedChord,
+            }),
+          ],
           onExit: assign({
             playingChord: undefined,
           }),
@@ -123,16 +128,10 @@ export const appConfig: MachineConfig<AppContext, AppSchema, AppEvent> = {
           },
           activities: ['playingChord'],
           onEntry: [
+            assign({ playingChord: (c, _e) => c.selectedChord }),
             send('PRESS', { to: 'button' }),
-            assign({
-              selectedChord: (c, _e) => c.playingChord || c.selectedChord,
-            }),
           ],
-          onExit: [
-            assign({
-              playingChord: undefined,
-            }),
-          ],
+          onExit: assign({ playingChord: undefined }),
           on: {
             'CHORD.RELEASE': {
               actions: send('RELEASE', { to: 'button' }),
@@ -144,7 +143,7 @@ export const appConfig: MachineConfig<AppContext, AppSchema, AppEvent> = {
               target: 'playingChordButton',
               actions: [
                 assign({
-                  playingChord: (_c, e) => e.chord,
+                  selectedChord: (_c, e) => e.chord,
                 }),
                 'sendUpdateChord',
               ],
@@ -165,7 +164,6 @@ export const appConfig: MachineConfig<AppContext, AppSchema, AppEvent> = {
         'SET.CHORD': {
           actions: assign({
             selectedChord: (_c, e) => e.chord,
-            playingChord: (_c, e) => e.chord,
           }),
           target: 'default.playingChordShort',
         },
@@ -183,7 +181,7 @@ export const appConfig: MachineConfig<AppContext, AppSchema, AppEvent> = {
           target: 'default.playingChordButton',
           actions: [
             assign({
-              playingChord: (_c, e) => e.chord,
+              selectedChord: (_c, e) => e.chord,
             }),
             'sendUpdateChord',
           ],

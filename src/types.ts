@@ -11,6 +11,7 @@ export * from './lib/music-theory';
 
 export type Song = { bpm?: number; measures: Measure[] };
 export type Measure = { chord: Chord };
+export type Volume = number;
 
 // re-exports from Tone
 export type ToneNote = string;
