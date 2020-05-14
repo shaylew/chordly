@@ -6,9 +6,6 @@ import { Voicing, voiceShepard, normalizeGroups } from './voicing';
 
 function toGroups(chord: Chord): Voicing[] {
   const v = normalizeGroups(voiceShepard(chord));
-  console.log(
-    v.map(g => g.map(([n, v]) => `${n.toString()} ${v.toPrecision(2)}`)),
-  );
   return v;
 }
 
