@@ -27,7 +27,7 @@ const defaultSong: Song = {
     Chord.minor('F#'),
     Chord.minor('C#'),
     Chord.major('D'),
-    Chord.major('A', { octave: 3 }),
+    Chord.major('A'),
     Chord.major('D'),
     Chord.major('E'),
   ].map(chord => ({ chord })),

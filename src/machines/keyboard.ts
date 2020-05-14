@@ -144,7 +144,6 @@ export const keyboardConfig: MachineConfig<
           chord: undefined,
           root: undefined,
         }),
-        'notifyParent',
       ],
       on: {
         'KEYBOARD.CELL.CLICK': {
@@ -155,13 +154,12 @@ export const keyboardConfig: MachineConfig<
       },
     },
     selected: {
-      onEntry: 'notifyParent',
       on: {
         'KEYBOARD.CELL.CLICK': [
           {
             cond: (c, e) => !!c.root && c.layout.isReachable(c.root, e.cell),
             target: 'selected',
-            actions: chooseFactor,
+            actions: [chooseFactor, 'notifyParent'],
           },
           {
             target: 'unselected',

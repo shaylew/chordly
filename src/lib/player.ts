@@ -1,10 +1,15 @@
 import * as Tone from 'tone';
-
-import { ToneTime, ToneSynth, Song, Chord } from '../types';
 import { Monophonic } from 'tone/build/esm/instrument/Monophonic';
 
-function toNotes(chord: Chord): Array<string> {
-  return [...chord.notes.map(n => n.toString())];
+import { ToneTime, ToneSynth, Song, Chord } from '../types';
+import { Voicing, voiceShepard, normalizeGroups } from './voicing';
+
+function toGroups(chord: Chord): Voicing[] {
+  const v = normalizeGroups(voiceShepard(chord));
+  console.log(
+    v.map(g => g.map(([n, v]) => `${n.toString()} ${v.toPrecision(2)}`)),
+  );
+  return v;
 }
 
 function mkSynth(): ToneSynth {
@@ -24,27 +29,18 @@ export class Player {
     this.buttonSynth = mkSynth();
   }
 
-  triggerChord(
-    chord: Chord,
-    duration: ToneTime,
-    time?: ToneTime,
-    velocity?: number,
-  ): this {
-    this.buttonSynth.triggerAttackRelease(
-      toNotes(chord),
-      duration,
-      time,
-      velocity,
-    );
-    return this;
-  }
-
-  triggerChordStart(chord: Chord, time?: ToneTime, velocity?: number): this {
+  triggerChordStart(chord: Chord, time?: ToneTime): this {
     this.silenceSynth(this.buttonSynth);
+
+    const timeScale = 0;
     const baseTime = Tone.Time(time);
-    toNotes(chord).forEach((note, i) => {
-      const startTime = baseTime.valueOf() + Tone.Time('16n').valueOf() * i;
-      this.buttonSynth.triggerAttack([note], startTime, velocity);
+    const groups = toGroups(chord);
+    groups.forEach((voicing, i) => {
+      const startTime =
+        baseTime.valueOf() + Tone.Time('16n').valueOf() * i * timeScale;
+      voicing.forEach(([note, velocity]) => {
+        this.buttonSynth.triggerAttack([note.toString()], startTime, velocity);
+      });
     });
     return this;
   }
@@ -67,9 +63,13 @@ export class Player {
     Tone.Transport.bpm.value = 240;
 
     song.measures.forEach(({ chord }, i) => {
-      const notes = toNotes(chord);
+      const voicing = toGroups(chord).flat();
       Tone.Transport.scheduleOnce(time => {
-        this.songSynth.triggerAttackRelease(notes, '1m', time);
+        voicing.forEach(([note, velocity]) => {
+          const name = note.toString();
+          this.songSynth.triggerAttackRelease([name], '1m', time, velocity);
+        });
+
         if (onMeasure) onMeasure(i);
       }, `${i}m`);
     });

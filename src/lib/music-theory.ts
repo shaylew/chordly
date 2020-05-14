@@ -3,7 +3,7 @@ export type Interval = number;
 
 export type Accidental = 'sharp' | 'flat';
 
-export type Octave = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+export type Octave = number;
 
 export function positiveModulo(x: number, r: number): number {
   return ((x % r) + r) % r;
@@ -113,8 +113,16 @@ export class Note {
   transpose(interval: Interval): Note {
     const pc = transpose(this.pc, interval);
     const notional = this.pc + interval;
-    const octave = (this.octave + Math.floor(notional / 12)) as Octave;
+    const octave = this.octave + Math.floor(notional / 12);
     return new Note(pc, octave);
+  }
+
+  get number(): number {
+    return this.pc + this.octave * 12;
+  }
+
+  interval(other: Note): Interval {
+    return this.number - other.number;
   }
 
   toString(): string {
@@ -345,6 +353,10 @@ export class ChordType {
     }
   }
 
+  has(factor: FactorName): boolean {
+    return this.parts[factor] !== 'none';
+  }
+
   get triad(): string | undefined {
     const t = namedTriads.find(
       t => t.third === this.parts.third && t.fifth === this.parts.fifth,
@@ -398,35 +410,26 @@ export class ChordType {
 export type ChordTypeName = keyof typeof ChordType.names;
 export type ChordTypeOrName = ChordType | ChordTypeName;
 
-export type Voicing = {
-  octave: Octave;
-  inversion: number;
-};
+export type Inversion = number;
 
 export class Chord {
   readonly root: PitchClass;
-  readonly voicing: Voicing;
+  readonly inversion: Inversion;
   readonly type: ChordType;
 
   readonly pitches: Array<PitchClass>;
-  readonly rootNote: Note;
-  readonly notes: Array<Note>;
 
   constructor(
     root: PitchClassOrName,
     type: ChordType | ChordTypeName,
-    voicing?: Partial<Voicing>,
+    inversion?: Inversion,
   ) {
     this.root = toPitchClass(root);
-    this.voicing = { inversion: 0, octave: 4, ...voicing };
+    this.inversion = inversion || 0;
     this.type = typeof type === 'object' ? type : ChordType.named(type);
 
-    const intervals = this.type.inversion(this.voicing.inversion);
+    const intervals = this.type.inversion(this.inversion);
     this.pitches = intervals.map(interval => transpose(this.root, interval));
-    this.rootNote = new Note(this.root, this.voicing.octave);
-
-    const voicedIntervals = this.type.inversion(this.voicing.inversion);
-    this.notes = voicedIntervals.map(i => this.rootNote.transpose(i));
   }
 
   nameParts(accidental: Accidental = 'flat'): string[] {
@@ -444,7 +447,7 @@ export class Chord {
   }
 
   altered(parts: Partial<ChordParts>): Chord {
-    return new Chord(this.root, this.type.altered(parts), this.voicing);
+    return new Chord(this.root, this.type.altered(parts), this.inversion);
   }
 
   tertianAltered(parts: Partial<ChordParts>, key?: Key): Chord {
@@ -530,9 +533,9 @@ export class Chord {
   static defineNamed(name: ChordTypeName) {
     return function namedChord(
       root: PitchClassOrName,
-      voicing?: Partial<Voicing>,
+      inversion?: Inversion,
     ): Chord {
-      return new Chord(root, name, voicing);
+      return new Chord(root, name, inversion);
     };
   }
 
