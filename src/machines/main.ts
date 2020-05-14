@@ -7,7 +7,6 @@ import {
   AssignAction,
   send,
   assign as coreAssign,
-  actions,
 } from 'xstate';
 
 import { Song, Chord, Key } from '../types';

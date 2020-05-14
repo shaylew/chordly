@@ -45,7 +45,7 @@ export class Player {
     return this;
   }
 
-  triggerChordEnd(chord: Chord, time?: ToneTime): this {
+  triggerChordEnd(_chord: Chord, _time?: ToneTime): this {
     this.silenceSynth(this.buttonSynth);
     return this;
   }

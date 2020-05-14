@@ -1,5 +1,5 @@
 import { PitchClass, Octave, Chord, Note, Volume } from '../types';
-import { stepsAbove, factorNames, transpose, FactorName } from './music-theory';
+import { stepsAbove, factorNames, transpose } from './music-theory';
 import { Interval } from 'tone/build/esm/core/type/Units';
 
 export type Voicing = Array<[Note, Volume]>;
