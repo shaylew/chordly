@@ -1,13 +1,17 @@
 {
-  "name": "chord",
-  "version": "1.0.0",
+  "name": "chordly",
+  "version": "0.9.0",
   "description": "interactive chord progression generator",
   "repository": "https://github.com/shaylew/chordly",
   "main": "index.js",
   "scripts": {
     "dev": "next",
     "build": "next build",
-    "start": "next start -p $PORT"
+    "start": "next start -p $PORT",
+    "build:profiling": "cross-env PROFILING=true next build",
+    "analyze": "cross-env ANALYZE=true next build",
+    "analyze:server": "cross-env BUNDLE_ANALYZE=server next build",
+    "analyze:browser": "cross-env BUNDLE_ANALYZE=browser next build"
   },
   "keywords": [],
   "author": "Shay Lewis",
@@ -24,11 +28,13 @@
     "xstate": "^4.8.0"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^9.4.0",
     "@types/next": "^9.0.0",
     "@types/node": "^13.9.0",
     "@types/react": "^16.9.23",
     "@typescript-eslint/eslint-plugin": "^2.23.0",
     "@typescript-eslint/parser": "^2.23.0",
+    "cross-env": "^7.0.2",
     "eslint": "^6.8.0",
     "eslint-config-prettier": "^6.10.0",
     "eslint-plugin-prettier": "^3.1.2",
@@ -36,6 +42,7 @@
     "husky": "^4.2.3",
     "lint-staged": "^10.0.8",
     "prettier": "^1.19.1",
+    "svg-sprite-loader": "^4.2.5",
     "typescript": "^3.8.3"
   },
   "husky": {

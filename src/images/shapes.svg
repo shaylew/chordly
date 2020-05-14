@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.5 -0.5 1 1">
+  <defs>
+    <!-- <polygon id="hexagon" points="-100,0 -50,87 50,87 100,0 50,-87 -50,-87 -100,0" vector-effect="non-scaling-stroke"/> -->
+    <!-- <polygon id="hexagon" points=" 0,0.5  0.25,1   0.75,1   1,0.5  0.75,0     0.25,0     0,0.5" vector-effect="non-scaling-stroke"/> -->
+    <!-- <polygon id="hexagon" transform="scale(1, 0.866)" points="-0.5,0 -0.25,0.5 0.25,0.5 0.5,0 0.25,-0.5 -0.25,-0.5 -0.5,0" vector-effect="non-scaling-stroke"/> -->
+    <polygon id="hexagon" points="-0.5,0 -0.25,0.433 0.25,0.433 0.5,0 0.25,-0.433 -0.25,-0.433 -0.5,0" vector-effect="non-scaling-stroke"/>
+    <circle id="circle" cx="0" cy="0" r="0.5" vector-effect="non-scaling-stroke"/>
+    <clipPath id="hexagonClip" clip-path-units="objectBoundingBox">
+      <!-- <use href="hexagon" /> -->
+      <polygon points="-0.5,0 -0.25,0.433 0.25,0.433 0.5,0 0.25,-0.433 -0.25,-0.433 -0.5,0"/>
+    </clipPath>
+    <clipPath id="circleClip">
+      <!-- <use href="circle" /> -->
+      <circle cx="0" cy="0" r="0.5"/>
+    </clipPath>
+  </defs>
+</svg>
+
+
+<!-- 87,0 174,50 174,150 87,200 0,150 0,50 87,0 -->
+<!-- 0,-100 87,-50 87,50 0,100 -87,50 -87,-50 0,-100 -->
+
+<!-- "-0.5,0 -0.25,0.433 0.25,0.433 0.5,0 0.25,-0.433 -0.25,-0.433 -0.5,0" -->

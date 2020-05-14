@@ -1,69 +1,80 @@
 import React from 'react';
-import { Interpreter } from 'xstate';
-import { useService } from '@xstate/react';
-
 import { makeStyles } from '@material-ui/core/styles';
-import { ClickAwayListener } from '@material-ui/core';
 
-import { Key } from '../types';
-import {
-  TimelineEvent,
-  TimelineContext,
-  TimelineSchema,
-} from '../machines/timeline';
+import { Song, Chord } from '../types';
+import { Send, ChordButtonEvent } from '../machines/types';
 import TimelineProgress from './TimelineProgress';
 import TimelineSlot from './TimelineSlot';
+import ChordButton, { ChordButtonProps } from './ChordButton';
+import AddButton from './AddButton';
 
 export type TimelineProps = {
+  song: Song;
   playing?: boolean;
-  keySignature?: Key;
-  stateMachineRef: Interpreter<TimelineContext, TimelineSchema, TimelineEvent>;
+  playingIndex?: number;
+  onDelete?: (chord: Chord, index: number) => void;
+  onAdd?: () => void;
+  selectedChord?: Chord;
+  chordProps: Partial<ChordButtonProps>;
+  send?: Send<ChordButtonEvent>;
 };
 
 const useStyles = makeStyles({
   root: {
     position: 'relative',
-    display: 'flex',
-    flexDirection: 'row',
+    display: 'grid',
+    gridTemplateRows: 'min-content',
+    gridTemplateColumns: '1fr 1fr 1fr 1fr',
+    gridAutoRows: '1fr',
     alignItems: 'stretch',
-  },
-  slotWrapper: {
-    flexGrow: 1,
-    padding: '0.5em',
+    gridGap: '16px',
   },
 });
 
 export const Timeline: React.FC<TimelineProps> = props => {
-  const { playing, stateMachineRef, keySignature } = props;
-  const classes = useStyles();
-
-  const [current, send] = useService(stateMachineRef);
-  const state = current || stateMachineRef.initialState;
-
-  const { song, selectedMeasure } = state.context;
+  const {
+    send,
+    song,
+    onDelete,
+    onAdd,
+    selectedChord,
+    playing,
+    playingIndex,
+    chordProps,
+  } = props;
   const totalBars = song.measures.length;
+
+  const classes = useStyles();
 
   return (
     <div className={classes.root}>
       <TimelineProgress totalBars={totalBars} playing={playing} />
       {song.measures.map((measure, i) => {
-        const selected = i === selectedMeasure;
+        const selected = i === playingIndex;
+        const chord = measure.chord;
         return (
-          <ClickAwayListener
+          <TimelineSlot
             key={i}
-            onClickAway={() => selected && send('DESELECT')}
+            onDelete={onDelete && (() => onDelete(chord, i))}
           >
-            <div className={classes.slotWrapper}>
-              <TimelineSlot
-                keySignature={keySignature}
-                measure={measure}
-                selected={selected}
-                onClick={() => send({ type: 'MEASURE.SELECT', id: i })}
-              />
-            </div>
-          </ClickAwayListener>
+            <ChordButton
+              chord={chord}
+              highlight={selected}
+              send={send}
+              top="name"
+              bottom="notes"
+              {...chordProps}
+            />
+          </TimelineSlot>
         );
       })}
+      <TimelineSlot>
+        <AddButton
+          onClick={onAdd}
+          chord={selectedChord}
+          keySignature={chordProps.keySignature}
+        />
+      </TimelineSlot>
     </div>
   );
 };

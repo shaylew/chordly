@@ -33,6 +33,6 @@ export function toKey(chord: Chord): Key | undefined {
 export function keyToChord(key: Key): Chord {
   return new Chord(
     key.tonic,
-    key.name === 'minor' ? ChordType.minor() : ChordType.major(),
+    key.type === 'minor' ? ChordType.minor() : ChordType.major(),
   );
 }

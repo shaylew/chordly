@@ -1,8 +1,9 @@
-import { Theme, createMuiTheme, Color } from '@material-ui/core/';
+import { Theme, createMuiTheme, Color, makeStyles } from '@material-ui/core/';
 import * as MuiColors from '@material-ui/core/colors';
 
 import { PitchClass } from '../types';
 import defaultTheme from './theme';
+import { StyleRules, CSSProperties } from '@material-ui/core/styles/withStyles';
 
 function mkTheme(color: string): Theme {
   return createMuiTheme({
@@ -19,24 +20,29 @@ function mkTheme(color: string): Theme {
   });
 }
 
-export const colors = [
+export const rainbow = [
   MuiColors.yellow,
   MuiColors.amber,
-  MuiColors.orange,
-  // (MuiColors.deepOrange),
+  // MuiColors.orange,
+  MuiColors.deepOrange,
   MuiColors.red,
-  MuiColors.pink,
+  // MuiColors.pink,
   MuiColors.purple,
-  // (MuiColors.deepPurple),
+  MuiColors.deepPurple,
   MuiColors.indigo,
-  MuiColors.blue,
-  //mkTheme(MuiColors.lightBlue),
+  // MuiColors.blue,
+  MuiColors.lightBlue,
   MuiColors.cyan,
-  MuiColors.teal,
+  // MuiColors.teal,
   MuiColors.green,
-  // mkTheme(MuiColors.lightGreen),
+  MuiColors.lightGreen,
   MuiColors.lime,
 ];
+
+const prime = 5;
+export const colors = rainbow.map((_, i) => {
+  return rainbow[(i * prime) % rainbow.length];
+});
 
 export function noteColor(note: PitchClass): Color {
   return colors[note];
@@ -47,6 +53,23 @@ export const themes = colors.map(c => mkTheme(c[700]));
 export function noteTheme(note: PitchClass): Theme {
   return themes[note];
 }
+
+export function colorFor(note?: number): string {
+  const name = note === undefined ? 'none' : note;
+  return `note-${name}`;
+}
+
+const colorStyles: StyleRules = {};
+function defineColorStyles(color: Color, pc: number | undefined): void {
+  const style: CSSProperties = {};
+  Object.entries(color).forEach(([weight, c]) => {
+    style[`--note-color-${weight}`] = c;
+  });
+  colorStyles[colorFor(pc)] = style;
+}
+colors.forEach(defineColorStyles);
+defineColorStyles(MuiColors.grey, undefined);
+export const useNoteColors = makeStyles(colorStyles);
 
 // export const altColors: string[] = [
 //   '#ffdf00', // yellow

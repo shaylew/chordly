@@ -1,6 +1,4 @@
-import { Machine, MachineConfig, EventObject } from 'xstate';
-
-const holdTime = 500;
+import { Machine, MachineConfig, EventObject, assign } from 'xstate';
 
 export type EventId = 'CLICK' | 'PRESS' | 'RELEASE';
 
@@ -10,40 +8,51 @@ export interface HoldButtonEvent extends EventObject {
 
 export interface HoldButtonSchema {
   states: {
-    idle: {};
+    unpressed: {};
     pressing: {};
     holding: {};
     releasingFast: {};
     releasingSlow: {};
+    done: {};
   };
+}
+
+export interface HoldButtonContext {
+  delay: number;
+  timeReleased?: number;
 }
 
 export type HoldButtonStates = keyof HoldButtonSchema['states'];
 
 export const holdButtonConfig: MachineConfig<
-  {},
+  HoldButtonContext,
   HoldButtonSchema,
   HoldButtonEvent
 > = {
-  initial: 'idle',
+  initial: 'unpressed',
+
+  context: {
+    delay: 700,
+  },
 
   states: {
-    idle: {
+    unpressed: {
       on: {
-        CLICK: {
-          actions: 'pressEffect',
-          target: 'releasingSlow',
-        },
+        CLICK: { target: 'releasingSlow' },
         PRESS: { target: 'pressing' },
       },
     },
     pressing: {
-      entry: 'pressEffect',
-      on: {
-        RELEASE: { target: 'releasingSlow' },
-      },
       after: {
-        [holdTime]: { target: 'holding' },
+        MINIMUM_HOLD_TIME: { target: 'holding' },
+      },
+      on: {
+        RELEASE: {
+          actions: assign({
+            timeReleased: (_context, _event) => Date.now(),
+          }),
+          target: 'releasingSlow',
+        },
       },
     },
     holding: {
@@ -53,23 +62,32 @@ export const holdButtonConfig: MachineConfig<
     },
     releasingSlow: {
       after: {
-        [holdTime]: {
-          actions: 'releaseEffect',
-          target: 'idle',
-        },
+        REMAINING_HOLD_TIME: { target: 'done' },
       },
     },
     releasingFast: {
       after: {
-        [holdTime / 4]: {
-          actions: 'releaseEffect',
-          target: 'idle',
-        },
+        QUICK_RELEASE_TIME: { target: 'done' },
       },
+    },
+    done: {
+      type: 'final',
     },
   },
 };
 
-export const holdButtonMachine = Machine(holdButtonConfig);
+export const holdButtonMachine = Machine(holdButtonConfig, {
+  delays: {
+    MINIMUM_HOLD_TIME: (context, _event) => context.delay,
+    REMAINING_HOLD_TIME: (context, _event) => {
+      if (context.timeReleased) {
+        return context.delay - (Date.now() - context.timeReleased);
+      } else {
+        return context.delay;
+      }
+    },
+    QUICK_RELEASE_TIME: 0,
+  },
+});
 
 export default holdButtonMachine;

@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react';
 
-import { Player } from '../lib/core';
+import { Player } from '../lib/player';
 
-export const PlayerContext: React.Context<Player | null> = React.createContext<Player | null>(
-  null,
-);
+export const PlayerContext: React.Context<
+  Player | undefined
+> = React.createContext<Player | undefined>(undefined);
 
-export function usePlayer(): Player | null {
+export function usePlayer(): Player | undefined {
   return React.useContext(PlayerContext);
 }
 
 export const PlayerProvider: React.FC = props => {
-  const [player, setPlayer] = useState<Player | null>(null);
+  // On the server there's no AudioContext -- nor any point to
+  // creating the player -- so the SSR pass just gets null here.
+  const [player, _setPlayer] = useState<Player | undefined>(
+    typeof window === 'undefined' ? undefined : new Player(),
+  );
   useEffect(() => {
-    const p = new Player();
-    setPlayer(p);
-    return (): void => p.dispose();
+    return (): void => player?.dispose();
   }, []);
 
   return (

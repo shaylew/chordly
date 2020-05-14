@@ -9,9 +9,7 @@ const Index: NextPage<{}> = () => {
   return (
     <PlayerProvider>
       <Paper elevation={0} style={{ minHeight: '100vh' }}>
-        <Container maxWidth="lg">
-          <App />
-        </Container>
+        <App />
       </Paper>
     </PlayerProvider>
   );
