@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   Select,
   makeStyles,
@@ -7,15 +7,7 @@ import {
   Theme,
 } from '@material-ui/core';
 
-import { EventObject } from 'xstate';
-import { useService } from '@xstate/react';
-
-import {
-  KeySignatureContext,
-  SetEvent,
-  ChordButtonEvent,
-  KeySignatureInterpreter,
-} from '../machines/types';
+import { ChordButtonEvent, Send } from '../machines/types';
 import {
   pitchClasses,
   prettyName,
@@ -23,58 +15,54 @@ import {
   isPitchClass,
   isKeyType,
 } from '../lib/music-theory';
-import ChordDisplay from './ChordButton';
+import ChordButton from './ChordButton';
 
-const useKeySelectStyles = makeStyles((theme: Theme) => ({
-  root: {
-    display: 'flex',
-    justifyContent: 'stretch',
-    fontSize: '80%',
-  },
-  signature: {},
-  formControl: {
-    margin: theme.spacing(1),
-    minWdith: 120,
-  },
-  numerals: {
-    flex: '1 1 auto',
-    display: 'flex',
-    justifyContent: 'space-around',
-    alignItems: 'stretch',
-  },
-  numeralButton: {
-    flex: '1 0 8%',
-    margin: `0 ${theme.spacing(1)}px`,
-  },
-}));
+const useKeySelectStyles = makeStyles((theme: Theme) => {
+  const s1 = theme.spacing(1);
+  const s2 = theme.spacing(2);
+  return {
+    root: {
+      display: 'flex',
+      alignItems: 'stretch',
+      marginTop: `${s2}px`,
+    },
+    signature: {},
+    formControl: {
+      margin: `${s1}px ${s1}px 0 ${s1}px`,
+      minWidth: '4em',
+      fontSize: '125%',
+    },
+    numerals: {
+      flex: '1 1 auto',
+      display: 'flex',
+      justifyContent: 'space-around',
+      alignItems: 'stretch',
+    },
+    numeralButton: {
+      flex: '1 0 0',
+      margin: `0 ${s1}px`,
+    },
+  };
+});
 
-export type KeySelectProps<
-  TContext extends KeySignatureContext,
-  TEvent extends EventObject
-> = {
-  service: KeySignatureInterpreter<
-    TContext,
-    TEvent | SetEvent | ChordButtonEvent
-  >;
+export type KeySelectProps = {
+  sendKey?: Send<{ type: 'SET.KEY'; keySignature: Key }>;
+  sendButton?: Send<ChordButtonEvent>;
+  keySignature: Key;
 };
 
-export function KeySelect<
-  TContext extends KeySignatureContext,
-  TEvent extends EventObject
->(props: KeySelectProps<TContext, TEvent>): JSX.Element {
-  const { service } = props;
-  const [state, send] = useService(service);
-  const { keySignature } = state.context;
+export const KeySelectRaw: React.FC<KeySelectProps> = props => {
+  const { sendKey, sendButton, keySignature } = props;
 
   const onChangeTonic = useCallback(
     (e: React.ChangeEvent<{ value: unknown }>): void => {
       const value = e.target.value;
       if (isPitchClass(value)) {
         const key = Key.named(keySignature.type, value);
-        send({ type: 'SET.KEY', keySignature: key });
+        sendKey && sendKey({ type: 'SET.KEY', keySignature: key });
       }
     },
-    [send, keySignature],
+    [sendKey, keySignature],
   );
 
   const onChangeName = useCallback(
@@ -82,10 +70,18 @@ export function KeySelect<
       const value = e.target.value;
       if (isKeyType(value)) {
         const key = Key.named(value, keySignature.tonic);
-        send({ type: 'SET.KEY', keySignature: key });
+        sendKey && sendKey({ type: 'SET.KEY', keySignature: key });
       }
     },
-    [send, keySignature],
+    [sendKey, keySignature],
+  );
+
+  const degreeChords = useMemo(
+    () =>
+      keySignature.notes.map((_pc, degree) =>
+        keySignature.naturalChord(degree + 1),
+      ),
+    [keySignature],
   );
 
   const classes = useKeySelectStyles();
@@ -115,23 +111,22 @@ export function KeySelect<
         </FormControl>
       </div>
       <div className={classes.numerals}>
-        {keySignature.notes.map((_pc, degree) => {
-          const chord = keySignature.naturalChord(degree + 1);
-          return (
-            <ChordDisplay
-              key={degree}
-              service={service}
-              className={classes.numeralButton}
-              chord={chord}
-              keySignature={keySignature}
-              top="roman"
-              bottom="none"
-            />
-          );
-        })}
+        {degreeChords.map((chord, degree) => (
+          <ChordButton
+            key={degree}
+            send={sendButton}
+            className={classes.numeralButton}
+            chord={chord}
+            keySignature={keySignature}
+            top="roman"
+            bottom="none"
+          />
+        ))}
       </div>
     </div>
   );
-}
+};
+
+export const KeySelect = React.memo(KeySelectRaw);
 
 export default KeySelect;

@@ -139,10 +139,13 @@ export const keyboardConfig: MachineConfig<
 
   states: {
     unselected: {
-      onEntry: assign({
-        chord: undefined,
-        root: undefined,
-      }),
+      onEntry: [
+        assign({
+          chord: undefined,
+          root: undefined,
+        }),
+        'notifyParent',
+      ],
       on: {
         'KEYBOARD.CELL.CLICK': {
           cond: (_c, e) => e.cell.isRoot,
@@ -152,12 +155,13 @@ export const keyboardConfig: MachineConfig<
       },
     },
     selected: {
+      onEntry: 'notifyParent',
       on: {
         'KEYBOARD.CELL.CLICK': [
           {
             cond: (c, e) => !!c.root && c.layout.isReachable(c.root, e.cell),
             target: 'selected',
-            actions: [chooseFactor, 'notifyParent'],
+            actions: chooseFactor,
           },
           {
             target: 'unselected',

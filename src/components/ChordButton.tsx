@@ -1,29 +1,31 @@
 import React, { useMemo } from 'react';
 import clsx from 'clsx';
 import {
-  ButtonBase,
   makeStyles,
+  ButtonBase,
   ButtonBaseProps,
   Paper,
+  PaperProps,
 } from '@material-ui/core';
-import { EventObject } from 'xstate';
-import { useService } from '@xstate/react';
 
 import { Chord, Key, transpose } from '../types';
-import { ChordButtonInterpreter } from '../machines/types';
+import { ChordButtonEvent, Send } from '../machines/types';
 import { useNoteColors } from '../lib/colors';
 
 type ButtonProps = ButtonBaseProps<'div', { component?: 'div' }>;
 
-export type ChordButtonProps<TEvent extends EventObject> = {
+export type ChordButtonProps = {
   chord: Chord;
   keySignature?: Key;
+  send?: Send<ChordButtonEvent>;
   highlight?: boolean;
   minimumParts?: number;
   top?: 'name' | 'notes' | 'roman';
   bottom?: 'name' | 'notes' | 'roman' | 'none';
-  service?: ChordButtonInterpreter<TEvent>;
-} & ButtonProps;
+  className?: string;
+  buttonProps?: ButtonProps;
+  paperProps?: PaperProps;
+};
 
 type ChordSectionProps = {
   chord: Chord;
@@ -104,6 +106,10 @@ const useChordStyles = makeStyles({
   },
   triad: {
     gridColumn: 'span 2',
+  },
+  roman: {},
+  '$roman:not($soloTop)': {
+    gridColumn: 'span 3',
   },
 });
 
@@ -187,14 +193,13 @@ const ChordNotes: React.FC<ChordSectionProps> = props => {
 
 const ChordRoman: React.FC<ChordSectionProps> = props => {
   const { roman, className } = props;
-  return <div className={className}>{roman}</div>;
+  const classes = useChordStyles();
+  return <div className={clsx(classes.roman, className)}>{roman}</div>;
 };
 
-export function ChordButton<T extends EventObject>(
-  props: ChordButtonProps<T>,
-): JSX.Element {
+export const ChordButtonRaw: React.FC<ChordButtonProps> = props => {
   const {
-    service,
+    send,
     chord,
     top = 'name',
     bottom = 'notes',
@@ -202,19 +207,39 @@ export function ChordButton<T extends EventObject>(
     highlight = false,
     keySignature = Key.major('C'),
     minimumParts = 0,
-    ...buttonProps
+    buttonProps = {},
+    paperProps = {},
   } = props;
 
-  const [_state, send] = service ? useService(service) : [null, null];
-  const events = useMemo(
-    () => ({
-      onClick: () => send && send({ type: 'CHORD.CLICK', chord }),
-      onMouseDown: () => send && send({ type: 'CHORD.PRESS', chord }),
-      onMouseUp: () => send && send({ type: 'CHORD.RELEASE', chord }),
-      onMouseLeave: () => send && send({ type: 'CHORD.RELEASE', chord }),
-    }),
-    [send, chord],
-  );
+  const events = useMemo(() => {
+    const click = (): void => {
+      send && send({ type: 'CHORD.CLICK', chord });
+    };
+    const sendPress = (): void => {
+      send && send({ type: 'CHORD.PRESS', chord });
+    };
+    const release = (): void => {
+      send && send({ type: 'CHORD.RELEASE', chord });
+    };
+
+    return {
+      onClick: click,
+      onMouseDown: sendPress,
+      onMouseUp: release,
+      onMouseLeave: release,
+      onTouchStart: (e: React.TouchEvent) => {
+        e.preventDefault();
+        sendPress();
+      },
+      onTouchEnd: (e: React.TouchEvent) => {
+        e.preventDefault();
+        release();
+      },
+      onContextMenu: (e: React.MouseEvent) => {
+        e.preventDefault();
+      },
+    };
+  }, [send, chord]);
 
   const colors = useNoteColors();
   const classes = useChordStyles();
@@ -268,7 +293,11 @@ export function ChordButton<T extends EventObject>(
   }
 
   return (
-    <Paper elevation={2} className={clsx(classes.paper, className)}>
+    <Paper
+      elevation={2}
+      className={clsx(classes.paper, className)}
+      {...paperProps}
+    >
       <ButtonBase
         component="div"
         focusRipple
@@ -283,6 +312,8 @@ export function ChordButton<T extends EventObject>(
       </ButtonBase>
     </Paper>
   );
-}
+};
+
+export const ChordButton = React.memo(ChordButtonRaw);
 
 export default ChordButton;

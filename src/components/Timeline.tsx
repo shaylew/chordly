@@ -1,27 +1,29 @@
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { EventObject } from 'xstate';
 
 import { Song, Chord } from '../types';
-import { ChordButtonInterpreter } from '../machines/types';
+import { Send, ChordButtonEvent } from '../machines/types';
 import TimelineProgress from './TimelineProgress';
 import TimelineSlot from './TimelineSlot';
 import ChordButton, { ChordButtonProps } from './ChordButton';
+import AddButton from './AddButton';
 
-export type TimelineProps<TEvent extends EventObject> = {
+export type TimelineProps = {
   song: Song;
   playing?: boolean;
   playingIndex?: number;
   onDelete?: (chord: Chord, index: number) => void;
-  chordProps: Partial<ChordButtonProps<TEvent>>;
-  service?: ChordButtonInterpreter<TEvent>;
+  onAdd?: () => void;
+  selectedChord?: Chord;
+  chordProps: Partial<ChordButtonProps>;
+  send?: Send<ChordButtonEvent>;
 };
 
 const useStyles = makeStyles({
   root: {
     position: 'relative',
     display: 'grid',
-    gridTemplateRows: 'min-content auto',
+    gridTemplateRows: 'min-content',
     gridTemplateColumns: '1fr 1fr 1fr 1fr',
     gridAutoRows: '1fr',
     alignItems: 'stretch',
@@ -29,10 +31,17 @@ const useStyles = makeStyles({
   },
 });
 
-export function Timeline<T extends EventObject>(
-  props: TimelineProps<T>,
-): JSX.Element {
-  const { song, onDelete, playing, playingIndex, chordProps, service } = props;
+export const Timeline: React.FC<TimelineProps> = props => {
+  const {
+    send,
+    song,
+    onDelete,
+    onAdd,
+    selectedChord,
+    playing,
+    playingIndex,
+    chordProps,
+  } = props;
   const totalBars = song.measures.length;
 
   const classes = useStyles();
@@ -51,14 +60,23 @@ export function Timeline<T extends EventObject>(
             <ChordButton
               chord={chord}
               highlight={selected}
-              service={service}
+              send={send}
+              top="name"
+              bottom="notes"
               {...chordProps}
             />
           </TimelineSlot>
         );
       })}
+      <TimelineSlot>
+        <AddButton
+          onClick={onAdd}
+          chord={selectedChord}
+          keySignature={chordProps.keySignature}
+        />
+      </TimelineSlot>
     </div>
   );
-}
+};
 
 export default Timeline;

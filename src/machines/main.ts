@@ -1,4 +1,13 @@
-import { Machine, MachineConfig, assign, send, StateSchema } from 'xstate';
+import {
+  Machine,
+  MachineConfig,
+  assign as coreAssign,
+  send,
+  StateSchema,
+  Assigner,
+  PropertyAssigner,
+  AssignAction,
+} from 'xstate';
 
 import { Song, Chord, Key } from '../types';
 import {
@@ -29,24 +38,31 @@ export type AppAction = 'playbackStart' | 'playbackStop';
 
 export interface AppContext extends KeySignatureContext {
   song: Song;
-  player: Player | null;
-  selectedChord: Chord | null;
-  previousChord: Chord | null;
-  playingChord: Chord | null;
-  playingIndex: number | null;
+  player?: Player;
+  selectedChord?: Chord;
+  playingChord?: Chord;
+  playingIndex?: number;
 }
 
 export interface AppSchema extends StateSchema<AppContext> {
   states: {
-    idle: {
+    default: {
       states: {
         idle: {};
-        playingSelectedChord: {};
+        playingChordButton: {};
+        playingChordShort: {};
       };
     };
     playingSong: {};
-    playingChord: {};
   };
+}
+
+function assign<TEvent extends AppEvent = AppEvent>(
+  assignment:
+    | Assigner<AppContext, TEvent>
+    | PropertyAssigner<AppContext, TEvent>,
+): AssignAction<AppContext, TEvent> {
+  return coreAssign(assignment);
 }
 
 function addChord(song: Song, chord: Chord): Song {
@@ -63,7 +79,7 @@ function removeChord(song: Song, index: number): Song {
 
 export const appConfig: MachineConfig<AppContext, AppSchema, AppEvent> = {
   id: 'main',
-  initial: 'idle',
+  initial: 'default',
   invoke: {
     src: keyboardMachine,
     id: 'keyboard',
@@ -77,115 +93,106 @@ export const appConfig: MachineConfig<AppContext, AppSchema, AppEvent> = {
   context: {
     song: { measures: [] },
     keySignature: Key.chromatic('C'),
-    player: null,
-    selectedChord: null,
-    previousChord: null,
-    playingChord: null,
-    playingIndex: null,
   },
 
   states: {
-    idle: {
+    default: {
       initial: 'idle',
       states: {
         idle: {},
-        playingSelectedChord: {
+
+        playingChordShort: {
           activities: ['playingChord'],
-          onEntry: assign({
-            playingChord: (context, _event) => context.selectedChord,
-          }),
           onExit: assign({
-            playingChord: (_context, _event) => null,
+            playingChord: undefined,
           }),
           after: {
             [CHORD_PLAY_TIME]: { target: 'idle' },
           },
         },
+
+        playingChordButton: {
+          invoke: {
+            id: 'button',
+            src: buttonMachine,
+            onDone: 'idle',
+            autoForward: false,
+            context: {
+              delay: CHORD_PLAY_TIME,
+            },
+          },
+          activities: ['playingChord'],
+          onEntry: [
+            send('PRESS', { to: 'button' }),
+            assign({
+              selectedChord: (c, _e) => c.playingChord || c.selectedChord,
+            }),
+          ],
+          onExit: [
+            assign({
+              playingChord: undefined,
+            }),
+          ],
+          on: {
+            'CHORD.RELEASE': {
+              actions: send('RELEASE', { to: 'button' }),
+            },
+            'CHORD.CLICK': {
+              actions: send('CLICK', { to: 'button' }),
+            },
+            'CHORD.PRESS': {
+              target: 'playingChordButton',
+              actions: [
+                assign({
+                  playingChord: (_c, e) => e.chord,
+                }),
+                'sendUpdateChord',
+              ],
+            },
+          },
+        },
       },
+
       on: {
         'SET.KEY': {
           actions: [
             assign({
-              keySignature: (_context, event) => event.keySignature,
+              keySignature: (_c, e) => e.keySignature,
             }),
             'sendUpdateKey',
           ],
         },
         'SET.CHORD': {
           actions: assign({
-            selectedChord: (_context, event) => event.chord,
+            selectedChord: (_c, e) => e.chord,
+            playingChord: (_c, e) => e.chord,
           }),
-          target: 'idle.playingSelectedChord',
+          target: 'default.playingChordShort',
         },
         'SONG.ADD_CHORD': {
           actions: assign({
-            song: (context, event) => addChord(context.song, event.chord),
+            song: (c, e) => addChord(c.song, e.chord),
           }),
-          target: 'idle',
         },
         'SONG.REMOVE_CHORD': {
           actions: assign({
-            song: (context, event) => removeChord(context.song, event.index),
+            song: (c, e) => removeChord(c.song, e.index),
           }),
-          target: 'idle',
         },
         'CHORD.PRESS': {
-          target: 'playingChord',
+          target: 'default.playingChordButton',
           actions: [
             assign({
-              playingChord: (_context, event) => event.chord,
+              playingChord: (_c, e) => e.chord,
             }),
             'sendUpdateChord',
           ],
         },
         'SONG.SET': {
-          actions: assign({ song: (_context, event) => event.song }),
+          actions: assign({ song: (_c, e) => e.song }),
         },
         'PLAY.START': {
           target: 'playingSong',
-        },
-      },
-    },
-
-    playingChord: {
-      invoke: {
-        id: 'button',
-        src: buttonMachine,
-        onDone: 'idle',
-        autoForward: false,
-        context: {
-          delay: CHORD_PLAY_TIME,
-        },
-      },
-      activities: ['playingChord'],
-      onEntry: [send('PRESS', { to: 'button' })],
-      onExit: [
-        assign({
-          playingChord: (_context, _event) => null,
-          previousChord: (context, _event) => {
-            if (context.playingChord !== context.selectedChord) {
-              return context.playingChord;
-            } else {
-              return context.previousChord;
-            }
-          },
-        }),
-      ],
-      on: {
-        'CHORD.RELEASE': {
-          actions: send('RELEASE', { to: 'button' }),
-        },
-        'CHORD.CLICK': {
-          actions: send('CLICK', { to: 'button' }),
-        },
-        'CHORD.PRESS': {
-          target: 'playingChord',
-          actions: [
-            assign({
-              playingChord: (_context, event) => event.chord,
-            }),
-            'sendUpdateChord',
-          ],
         },
       },
     },
@@ -194,22 +201,21 @@ export const appConfig: MachineConfig<AppContext, AppSchema, AppEvent> = {
       activities: ['playingSong'],
       onEntry: [
         assign({
-          playingIndex: (_context, _event) => 0,
-          previousChord: (_context, _event) => null,
-          playingChord: (context, _event) =>
-            context.song.measures[0]?.chord || null,
+          playingIndex: 0,
+          playingChord: (c, _e) => c.song.measures[0]?.chord,
         }),
         'sendUpdateChord',
       ],
       onExit: [
         assign({
-          playingIndex: (_context, _event) => null,
-          playingChord: (_context, _event) => null,
+          selectedChord: (c, _e) => c.playingChord,
+          playingIndex: undefined,
+          playingChord: undefined,
         }),
       ],
       on: {
-        'PLAY.STOP': { target: 'idle' },
-        'PLAY.FINISH': { target: 'idle' },
+        'PLAY.STOP': { target: 'default' },
+        'PLAY.FINISH': { target: 'default' },
         'PLAY.PROGRESS': {
           actions: [
             assign((c, e) => ({

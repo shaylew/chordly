@@ -1,5 +1,4 @@
 import React from 'react';
-import clsx from 'clsx';
 
 import { makeStyles } from '@material-ui/core/styles';
 import { Button } from '@material-ui/core';
@@ -19,15 +18,19 @@ const useStyles = makeStyles({
   },
   controls: {},
   remove: {
-    opacity: 0,
+    opacity: 0.7,
     transition: 'opacity 0.5s ease-in-out',
-    '$root:hover &': {
-      opacity: 0.7,
+    '@media (any-hover: hover)': {
+      '$root:not(:hover) &': {
+        opacity: 0,
+      },
     },
   },
+  noRemove: {
+    visibility: 'hidden',
+    pointerEvents: 'none',
+  },
 });
-
-const Empty: React.FC = () => <div>[ psyche ]</div>;
 
 export const TimelineSlot: React.FC<TimelineSlotProps> = props => {
   const { onDelete, children } = props;
@@ -37,7 +40,7 @@ export const TimelineSlot: React.FC<TimelineSlotProps> = props => {
     <div className={classes.root}>
       {children}
       <Button
-        className={classes.remove}
+        className={onDelete ? classes.remove : classes.noRemove}
         variant="text"
         startIcon={<Delete />}
         onClick={onDelete}

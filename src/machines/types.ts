@@ -1,7 +1,7 @@
 import { Chord, Key } from '../types';
-import { Interpreter, EventObject, StateSchema } from 'xstate';
+import { EventObject } from 'xstate';
 
-// Xstate, for all its fancy typings, is still more or less stringly-
+// XState, for all its fancy typings, is still more or less stringly-
 // typed when it comes to event names and payloads. So here we define
 // all the events that may be used by multiple machines.
 
@@ -38,11 +38,12 @@ export type ChordButtonEvent =
   | { type: 'CHORD.RELEASE'; chord: Chord }
   | { type: 'CHORD.CLICK'; chord: Chord };
 
-export type ChordButtonInterpreter<
-  T extends EventObject = ChordButtonEvent
-> = Interpreter<any, StateSchema<any>, T | ChordButtonEvent>;
+// One would hope that XState services would enjoy a usable sort of
+// subtyping, where a function could request a service having "at least
+// these context properties" or responding to "at least these events".
 
-export type KeySignatureInterpreter<
-  C extends KeySignatureContext,
-  E extends EventObject
-> = Interpreter<C, StateSchema<any>, E>;
+// It turns out it's not quite that simple. But if we don't need any
+// advanced features in a component, it's easy enough to pass the send
+// function and the state context separately.
+
+export type Send<T extends EventObject> = (event: T | T['type']) => unknown;

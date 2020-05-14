@@ -54,16 +54,21 @@ export function noteTheme(note: PitchClass): Theme {
   return themes[note];
 }
 
+export function colorFor(note?: number): string {
+  const name = note === undefined ? 'none' : note;
+  return `note-${name}`;
+}
+
 const colorStyles: StyleRules = {};
-function defineColorStyles(color: Color, pc: number | string): void {
+function defineColorStyles(color: Color, pc: number | undefined): void {
   const style: CSSProperties = {};
   Object.entries(color).forEach(([weight, c]) => {
     style[`--note-color-${weight}`] = c;
   });
-  colorStyles[`note-${pc}`] = style;
+  colorStyles[colorFor(pc)] = style;
 }
 colors.forEach(defineColorStyles);
-defineColorStyles(MuiColors.grey, 'none');
+defineColorStyles(MuiColors.grey, undefined);
 export const useNoteColors = makeStyles(colorStyles);
 
 // export const altColors: string[] = [

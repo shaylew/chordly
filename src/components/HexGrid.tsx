@@ -1,89 +1,29 @@
 import React from 'react';
 import clsx from 'clsx';
-import {
-  createStyles,
-  WithStyles,
-  withStyles,
-  makeStyles,
-} from '@material-ui/core';
+import { makeStyles } from '@material-ui/core';
 
 import '../images/shapes.svg';
 
 export const hexagonHeight = Math.sqrt(3);
 export const hexagonAspectRatio = hexagonHeight / 2;
 
-const shapeStyles = createStyles({
-  root: {},
-  hexagonEdge: {
-    // vectorEffect: 'non-scaling-stroke',
-    stroke: 'none',
-    fill: 'none',
-  },
-  hexagon: {
-    // vectorEffect: 'non-scaling-stroke',
-    stroke: 'none',
-    fill: 'none',
-  },
-  hexagonOverlay: {
-    // vectorEffect: 'non-scaling-stroke',
-    stroke: 'none',
-    fill: 'none',
-  },
-  allHexagons: {},
-  circle: {
-    // vectorEffect: 'non-scaling-stroke',
-    stroke: 'none',
-    fill: 'none',
-  },
-  circleOverlay: {
-    pointerEvents: 'none',
-    stroke: 'none',
-    fill: 'none',
-  },
-  content: {},
-});
+const hexagonPoints =
+  '-0.5,0 -0.25,0.433 0.25,0.433 0.5,0 0.25,-0.433 -0.25,-0.433 -0.5,0';
 
-export type ShapeClasses = WithStyles<typeof shapeStyles>;
-export type ShapeProps = React.ComponentProps<'g'>;
-type AllShapeProps = ShapeClasses & ShapeProps;
+export type HexagonProps = {
+  clipped?: boolean;
+} & React.ComponentProps<'use'>;
 
-const ShapeRaw: React.FC<AllShapeProps> = props => {
-  const { className, classes, ...rest } = props;
-
+export const Hexagon: React.FC<HexagonProps> = props => {
+  const { clipped, ...rest } = props;
   return (
-    <g className={clsx([classes.root, className])} {...rest}>
-      <use
-        href="#shapes_hexagon"
-        clipPath="url(#shapes_hexagonClip)"
-        className={clsx(classes.allHexagons, classes.hexagon)}
-      />
-      <use
-        href="#shapes_hexagon"
-        clipPath="url(#shapes_hexagonClip)"
-        className={clsx(classes.allHexagons, classes.hexagonOverlay)}
-      />
-      <use
-        href="#shapes_circle"
-        clipPath="url(#shapes_circleClip)"
-        className={classes.circle}
-      />
-      <use
-        href="#shapes_circle"
-        clipPath="url(#shapes_circleClip)"
-        className={clsx(classes.circle, classes.circleOverlay)}
-      />
-      <g clipPath="url(#shapes_hexagonClip)" className={classes.content}>
-        {props.children}
-      </g>
-      <use
-        href="#shapes_hexagon"
-        className={clsx(classes.allHexagons, classes.hexagonEdge)}
-      />
-    </g>
+    <use
+      href="#shapes_hexagon"
+      clipPath={clipped ? 'url(#shapes_hexagonClip)' : undefined}
+      {...rest}
+    />
   );
 };
-
-export const Shape = withStyles(shapeStyles)(ShapeRaw);
 
 const useGridStyles = makeStyles({
   wrapper: {
@@ -131,17 +71,17 @@ export const SVGGrid: React.FC<SVGGridProps> = props => {
   const xstride = 3 / 4;
   const ystride = Math.sqrt(3) / 2;
 
-  const x0 = -xstride;
-  const y0 = -ystride * 0.5;
-  const w = (cols + 1) * xstride;
-  const h = (rows + 0.5) * ystride;
+  const x0 = 0;
+  const y0 = 0;
+  const w = xstride * cols;
+  const h = ystride * (rows + 0.5);
   const viewBox = `${x0} ${y0} ${w} ${h}`;
 
   const byLayer: Record<string, JSX.Element[]> = {};
   children.forEach(({ row, col, layers }) => {
     for (const layer in layers) {
-      const x = xstride * col;
-      const y = ystride * row;
+      const x = xstride * (col + 0.5);
+      const y = ystride * (row + 0.5);
       const el = (
         <g key={`${row}-${col}`} transform={`translate(${x} ${y})`}>
           {layers[layer]}

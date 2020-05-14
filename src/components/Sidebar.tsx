@@ -1,16 +1,17 @@
 import React, { useMemo, useState } from 'react';
-import { useService } from '@xstate/react';
-import { makeStyles, Paper, Tabs, Tab } from '@material-ui/core';
+import { makeStyles, Paper, IconButton } from '@material-ui/core';
+import SwapHorizIcon from '@material-ui/icons/SwapHoriz';
 
-import { ChordButtonInterpreter } from '../machines/types';
-import { KeyboardInterpreter } from '../machines/keyboard';
+import { Send, ChordButtonEvent } from '../machines/types';
+import { KeyboardEvent, KeyboardContext } from '../machines/keyboard';
 import { FifthsLayout, ChromaticLayout } from '../lib/keyboard-layout';
 import ChordButton from './ChordButton';
 import Keyboard from './Keyboard';
 
 export type SidebarProps = {
-  keyboardService: KeyboardInterpreter;
-  buttonService?: ChordButtonInterpreter;
+  sendKeyboard?: Send<KeyboardEvent>;
+  sendButton?: Send<ChordButtonEvent>;
+  keyboardContext: KeyboardContext;
   keyboardDisabled?: boolean;
 };
 
@@ -39,54 +40,64 @@ const useStyles = makeStyles({
     position: 'absolute',
     height: '100%',
   },
+  toggleButton: {
+    position: 'absolute',
+    bottom: '0.5em',
+    left: '0.5em',
+  },
 });
 
 export const Sidebar: React.FC<SidebarProps> = props => {
-  const { keyboardService, buttonService, keyboardDisabled = false } = props;
+  const {
+    sendKeyboard,
+    sendButton,
+    keyboardContext,
+    keyboardDisabled = false,
+  } = props;
 
-  const [state, send] = useService(keyboardService);
-  const { keySignature, chord: selectedChord } = state.context;
+  const { keySignature, chord } = keyboardContext;
 
   const layouts = useMemo(
     () => [new ChromaticLayout(4), new FifthsLayout(4)],
     [],
   );
   const [layoutIx, setLayoutIx] = useState(0);
+  const toggleLayout = (): void => {
+    setLayoutIx(1 - layoutIx);
+    sendKeyboard &&
+      sendKeyboard({
+        type: 'KEYBOARD.LAYOUT.SET',
+        layout: layouts[1 - layoutIx],
+      });
+  };
 
   const classes = useStyles();
+  const paperProps = useMemo(() => ({ square: true, elevation: 0 }), []);
 
   return (
     <Paper square elevation={8} className={classes.root}>
       <div className={classes.currentChord}>
-        {selectedChord && (
+        {chord && (
           <ChordButton
-            chord={selectedChord}
+            chord={chord}
             keySignature={keySignature}
             minimumParts={4}
-            service={buttonService}
+            send={sendButton}
+            paperProps={paperProps}
           />
         )}
       </div>
       <div className={classes.keyboard}>
         <Keyboard
-          keyboardService={keyboardService}
+          send={sendKeyboard}
+          context={keyboardContext}
           className={classes.keyboardSvg}
           disabled={keyboardDisabled}
         />
       </div>
-      <Tabs
-        value={layoutIx}
-        indicatorColor="primary"
-        textColor="primary"
-        variant="fullWidth"
-        onChange={(_, i) => {
-          setLayoutIx(i);
-          send({ type: 'KEYBOARD.LAYOUT.SET', layout: layouts[i] });
-        }}
-      >
-        <Tab label="Chromatic" />
-        <Tab label="Fifths" />
-      </Tabs>
+      <IconButton className={classes.toggleButton} onClick={toggleLayout}>
+        <SwapHorizIcon />
+      </IconButton>
     </Paper>
   );
 };

@@ -115,7 +115,7 @@ export class ChromaticLayout extends KeyboardLayout {
     const height = Math.max(
       ...columns.map(
         (c, i) =>
-          (i % 2) / 2 + c.length - unreachable[i][0] - unreachable[i][1],
+          c.length + (i % 2) / 2 - 0.25 - unreachable[i][0] - unreachable[i][1],
       ),
     );
     const offsets = columns.map((_, i) => (height - levels[i].length) / 2);
@@ -163,7 +163,7 @@ export class ChromaticLayout extends KeyboardLayout {
 export class FifthsLayout extends KeyboardLayout {
   constructor(factors = 4, bottomRoot: PitchClass = 0) {
     const roots = circleOfFifths.map(pc => transpose(pc, bottomRoot));
-    const sideColumns = Math.ceil(factors / 2);
+    const sideColumns = 2;
 
     // center column
     const columns = [roots];
@@ -181,14 +181,14 @@ export class FifthsLayout extends KeyboardLayout {
         return {
           index: i,
           col: col,
-          row: 12 - (i + Math.abs(sideColumns - col) / 2),
+          row: 12 - (i + Math.abs(sideColumns - col) / 2) + 0.25,
           pitchClass: pc,
           isRoot: col === sideColumns,
         };
       });
     });
 
-    super(12, columns.length, cells, false);
+    super(13, columns.length, cells, false);
   }
 
   relationship(

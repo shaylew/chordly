@@ -17,6 +17,17 @@ export function stepsAbove(low: PitchClass, high: PitchClass): Interval {
   return positiveModulo(high - low, 12);
 }
 
+const prettySymbols: Record<string, string> = {
+  '#': '♯',
+  b: '♭',
+  '+': '⁺',
+  '0': '⁰',
+};
+const prettyRegexp = /[#b0+]/g;
+export function prettyNotation(notation: string): string {
+  return notation.replace(prettyRegexp, s => prettySymbols[s] || s);
+}
+
 // prettier-ignore
 export type NoteName =
   'C'|'C#'|'Db'|'D'|'D#'|'Eb'|'E'|'F'|'F#'|'Gb'|'G'|'G#'|'Ab'|'A'|'A#'|'Bb'|'B';
@@ -35,7 +46,9 @@ export const keyNames: NoteName[] =
 // prettier-ignore
 export const romanNumerals: string[] =
   ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
-
+// prettier-ignore
+export const chordNumerals =
+'I bII II bIII III IV bV V bVI VI bVII VII'.split(' ');
 // prettier-ignore
 export const pitchClasses: PitchClass[] =
   [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
@@ -87,7 +100,7 @@ export function prettyName(
   if (typeof name === 'number') {
     name = pcToName(name, accidentals);
   }
-  return name.replace('#', '♯').replace('b', '♭');
+  return prettyNotation(name);
 }
 
 export function toPitchClass(pcOrName: PitchClassOrName): PitchClass {
@@ -208,13 +221,13 @@ namedIntervals.forEach((infos, i) => {
   });
 });
 
-export const namedTriads: ReadonlyArray<Partial<
-  Record<'name' | FactorName, IntervalType>
+export const namedTriads: ReadonlyArray<{ name: string } & Partial<
+  Record<FactorName, IntervalType>
 >> = [
   { name: 'major', third: 'major', fifth: 'perfect' },
   { name: 'minor', third: 'minor', fifth: 'perfect' },
-  { name: 'augmented', third: 'major', fifth: 'augmented' },
-  { name: 'diminished', third: 'minor', fifth: 'diminished' },
+  // { name: 'augmented', third: 'major', fifth: 'augmented' },
+  // { name: 'diminished', third: 'minor', fifth: 'diminished' },
 ];
 
 // Occasionally you just want less structure than this,
@@ -355,6 +368,25 @@ export class ChordType {
     return function namedChord(extension?: Extension): ChordType {
       return ChordType.named(name, extension);
     };
+  }
+
+  static fromRoman(roman: string): [Interval, ChordType] | undefined {
+    const parts = roman.match(/^([b#]?)([ivx]+|[IVX]+)([+0]?)$/);
+    if (parts) {
+      const [accidental, body, modifier] = parts;
+      const numeral = body.toUpperCase();
+      const third = body === numeral ? 'major' : 'minor';
+      const fifth =
+        modifier === '0'
+          ? 'diminished'
+          : modifier === '+'
+          ? 'augmented'
+          : undefined;
+      const degree = chordNumerals.indexOf(`${accidental}${numeral}`);
+      return [degree, ChordType.named(fifth || third)];
+    } else {
+      return undefined;
+    }
   }
 
   static major = ChordType.defineNamed('major');
@@ -535,23 +567,16 @@ export class Key {
   }
 
   chordNumeral(chord: Chord): string {
-    let index = this.notes.indexOf(chord.root);
-    let prefix = '';
-    if (index === -1) {
-      prefix = '♭';
-      index = this.notes.indexOf(transpose(chord.root, 1));
-
-      if (index === -1) {
-        return '???';
-      }
-    }
-    const numeral = romanNumerals[index];
+    const numeral = chordNumerals[stepsAbove(this.tonic, chord.root)];
     const casedNumeral =
-      chord.type.parts.third === 'minor'
-        ? numeral.toLowerCase()
-        : numeral.toUpperCase();
-    const suffix = chord.type.parts.fifth === 'diminished' ? '⁰' : '';
-    return `${prefix}${casedNumeral}${suffix}`;
+      chord.type.parts.third === 'minor' ? numeral.toLowerCase() : numeral;
+    const suffix =
+      chord.type.parts.fifth === 'diminished'
+        ? '0'
+        : chord.type.parts.fifth === 'augmented'
+        ? '+'
+        : '';
+    return prettyNotation(`${casedNumeral}${suffix}`);
   }
 
   naturalChord(degree: number): Chord {
@@ -592,7 +617,7 @@ export class Key {
   }
 
   static minor(tonic: PitchClassOrName, accidentals?: Accidental): Key {
-    return Key.fromScale('minor', tonic, [0, 2, 3, 5, 7, 9, 11], accidentals);
+    return Key.fromScale('minor', tonic, [0, 2, 3, 5, 7, 8, 10], accidentals);
   }
 
   static chromatic(tonic: PitchClassOrName, accidentals?: Accidental): Key {

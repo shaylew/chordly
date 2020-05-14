@@ -1,26 +1,23 @@
-import React, { useCallback } from 'react';
-import { useMachine } from '@xstate/react';
+import React, { useCallback, useMemo } from 'react';
+import { useMachine, useService } from '@xstate/react';
 import * as Tone from 'tone';
 
 import {
   makeStyles,
   Grid,
-  Card,
-  CardContent,
   Container,
   Typography,
   Theme,
 } from '@material-ui/core';
 
-import { Song, Chord, Key, pitchClasses } from '../types';
+import { Song, Chord, Key } from '../types';
 import usePlayer from './PlayerContext';
-import appMachine, { AppContext, AppEvent } from '../machines/main';
+import appMachine from '../machines/main';
 import { KeyboardInterpreter } from '../machines/keyboard';
 import Sidebar from './Sidebar';
 import SongCard from './SongCard';
 import Timeline from './Timeline';
 import KeySelect from './KeySelect';
-import { ChordButtonInterpreter } from '../machines/types';
 
 const defaultSong: Song = {
   bpm: 240,
@@ -53,7 +50,7 @@ export const App: React.FC = () => {
 
   const [current, send, mainService] = useMachine(appMachine, {
     context: {
-      keySignature: Key.chromatic('C', 'sharp'),
+      keySignature: Key.major('C', 'sharp'),
       song: defaultSong,
       player: player,
     },
@@ -76,26 +73,14 @@ export const App: React.FC = () => {
     },
   });
 
-  const child = mainService.children.get('keyboard');
-  const keyboardService = (child as unknown) as KeyboardInterpreter;
-  const buttonService = (mainService as unknown) as ChordButtonInterpreter;
+  const child = mainService.children.get('keyboard') as KeyboardInterpreter;
+  const [keyboardState, sendKeyboard] = useService(child);
+  const keyboardContext = keyboardState.context;
+  const sendButton = send;
 
   const playingSong = current.matches('playingSong');
   const playingButtonChord = current.matches('playingChord');
-  const {
-    keySignature,
-    selectedChord,
-    playingIndex,
-    playingChord,
-    song,
-  } = current.context;
-
-  const onSelectChord = useCallback(
-    (chord: Chord) => {
-      send({ type: 'SET.CHORD', chord });
-    },
-    [send],
-  );
+  const { keySignature, selectedChord, playingIndex, song } = current.context;
 
   const onChordAdd = (): void => {
     if (selectedChord) {
@@ -103,9 +88,12 @@ export const App: React.FC = () => {
     }
   };
 
-  const onChordDelete = (_chord: Chord, index: number): void => {
-    send({ type: 'SONG.REMOVE_CHORD', index });
-  };
+  const onChordDelete = useCallback(
+    (_chord: Chord, index: number): void => {
+      send({ type: 'SONG.REMOVE_CHORD', index });
+    },
+    [send],
+  );
 
   const onTogglePlay = (): void => {
     // It has to be here, or the indirection will make the browser forget
@@ -115,13 +103,15 @@ export const App: React.FC = () => {
   };
 
   const classes = useStyles();
+  const chordProps = useMemo(() => ({ keySignature }), [keySignature]);
 
   return (
     <div className={classes.root}>
-      {keyboardService && (
+      {sendKeyboard && (
         <Sidebar
-          keyboardService={keyboardService}
-          buttonService={buttonService}
+          sendButton={sendButton}
+          sendKeyboard={sendKeyboard}
+          keyboardContext={keyboardContext}
           keyboardDisabled={playingButtonChord || playingSong}
         />
       )}
@@ -130,28 +120,23 @@ export const App: React.FC = () => {
           <Typography variant="h1">Chord ily</Typography>
           <Grid container spacing={4}>
             <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <KeySelect service={mainService} />
-                </CardContent>
-              </Card>
+              <KeySelect
+                sendKey={send}
+                sendButton={sendButton}
+                keySignature={keySignature}
+              />
             </Grid>
 
             <Grid item xs={12}>
               <SongCard playing={playingSong} onTogglePlay={onTogglePlay}>
                 <Timeline
-                  {...{
-                    song,
-                    service: buttonService,
-                    onDelete: onChordDelete,
-                    playingIndex:
-                      typeof playingIndex === 'number'
-                        ? playingIndex
-                        : undefined,
-                    chordProps: {
-                      keySignature,
-                    },
-                  }}
+                  song={song}
+                  send={sendButton}
+                  onDelete={onChordDelete}
+                  onAdd={onChordAdd}
+                  selectedChord={selectedChord}
+                  playingIndex={playingIndex}
+                  chordProps={chordProps}
                 />
               </SongCard>
             </Grid>
