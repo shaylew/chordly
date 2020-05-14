@@ -1,6 +1,6 @@
 {
-  "name": "chord",
-  "version": "1.0.0",
+  "name": "chordly",
+  "version": "0.9.0",
   "description": "interactive chord progression generator",
   "repository": "https://github.com/shaylew/chordly",
   "main": "index.js",
