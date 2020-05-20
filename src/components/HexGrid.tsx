@@ -2,13 +2,10 @@ import React from 'react';
 import clsx from 'clsx';
 import { makeStyles } from '@material-ui/core';
 
-import '../images/shapes.svg';
-
 export const hexagonHeight = Math.sqrt(3);
 export const hexagonAspectRatio = hexagonHeight / 2;
 
-const hexagonPoints =
-  '-0.5,0 -0.25,0.433 0.25,0.433 0.5,0 0.25,-0.433 -0.25,-0.433 -0.5,0';
+const hexagonClipUrl = 'url(#hexagonClip)';
 
 export type HexagonProps = {
   clipped?: boolean;
@@ -18,8 +15,8 @@ export const Hexagon: React.FC<HexagonProps> = props => {
   const { clipped, ...rest } = props;
   return (
     <use
-      href="#shapes_hexagon"
-      clipPath={clipped ? 'url(#shapes_hexagonClip)' : undefined}
+      href="#hexagon"
+      clipPath={clipped ? hexagonClipUrl : undefined}
       {...rest}
     />
   );
@@ -31,6 +28,12 @@ const useGridStyles = makeStyles({
     width: '100%',
     position: 'relative',
   },
+  defs: {
+    position: 'absolute',
+    height: 0,
+    width: 0,
+    // display: 'none',
+  },
   layerSvg: {
     display: 'block',
     position: 'absolute',
@@ -40,7 +43,6 @@ const useGridStyles = makeStyles({
     // right: 0,
     height: '100%',
     width: '100%',
-    pointerEvents: 'none',
     willChange: 'opacity',
   },
   spacerSvg: {
@@ -83,7 +85,7 @@ export const SVGGrid: React.FC<SVGGridProps> = props => {
       const x = xstride * (col + 0.5);
       const y = ystride * (row + 0.5);
       const el = (
-        <g key={`${row}-${col}`} transform={`translate(${x} ${y})`}>
+        <g key={`${row}-${col}`} transform={`translate(${x}, ${y})`}>
           {layers[layer]}
         </g>
       );
@@ -109,12 +111,18 @@ export const SVGGrid: React.FC<SVGGridProps> = props => {
 
   return (
     <div className={classes.wrapper}>
-      {/* <svg
-        className={classes.spacerSvg}
-        preserveAspectRatio="xMidYMid meet"
-        viewBox={viewBox}
-        {...rest}
-      ></svg> */}
+      <svg className={classes.defs} viewBox="-0.5 -0.5 1 1">
+        <defs>
+          <polygon
+            id="hexagon"
+            points="-0.5,0 -0.25,0.433 0.25,0.433 0.5,0 0.25,-0.433 -0.25,-0.433 -0.5,0"
+            vectorEffect="non-scaling-stroke"
+          />
+          <clipPath id="hexagonClip" clipPathUnits="userSpaceOnUse">
+            <polygon points="-0.5 0, -0.25 0.433, 0.25 0.433, 0.5 0, 0.25 -0.433, -0.25 -0.433, -0.5 0" />
+          </clipPath>
+        </defs>
+      </svg>
       {svgLayers}
     </div>
   );

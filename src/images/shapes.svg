@@ -5,9 +5,9 @@
     <!-- <polygon id="hexagon" transform="scale(1, 0.866)" points="-0.5,0 -0.25,0.5 0.25,0.5 0.5,0 0.25,-0.5 -0.25,-0.5 -0.5,0" vector-effect="non-scaling-stroke"/> -->
     <polygon id="hexagon" points="-0.5,0 -0.25,0.433 0.25,0.433 0.5,0 0.25,-0.433 -0.25,-0.433 -0.5,0" vector-effect="non-scaling-stroke"/>
     <circle id="circle" cx="0" cy="0" r="0.5" vector-effect="non-scaling-stroke"/>
-    <clipPath id="hexagonClip" clip-path-units="objectBoundingBox">
-      <!-- <use href="hexagon" /> -->
-      <polygon points="-0.5,0 -0.25,0.433 0.25,0.433 0.5,0 0.25,-0.433 -0.25,-0.433 -0.5,0"/>
+    <clipPath id="hexagonClip" clip-path-units="userSpaceOnUse">
+      <!-- <use href="hexagon" transform="scaleY(1.1547) translate(0.5 0.5)" /> -->
+      <polygon points="-0.5 0, -0.25 0.433, 0.25 0.433, 0.5 0, 0.25 -0.433, -0.25 -0.433, -0.5 0"/>
     </clipPath>
     <clipPath id="circleClip">
       <!-- <use href="circle" /> -->

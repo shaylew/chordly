@@ -32,7 +32,7 @@ function standardTransition(delayTime = 0, transitionTime = 0.5): string {
   const transition = transitionTime * transitionFactor;
   const delay = delayTime * delayFactor;
   return [
-    `transform ${transition}s ease-out ${delay}s`,
+    // `transform ${transition}s ease-out ${delay}s`,
     `opacity ${transition}s ease-out ${delay}s`,
   ].join(', ');
 }
@@ -40,6 +40,7 @@ function standardTransition(delayTime = 0, transitionTime = 0.5): string {
 const useKeyStyles = makeStyles({
   wrapper: {},
   selectable: {
+    cursor: 'pointer',
     '& $border': {
       opacity: 0.35,
     },
@@ -74,6 +75,7 @@ const useKeyStyles = makeStyles({
   notInKey: {},
   root: {
     transition: standardTransition(0),
+    userSelect: 'none',
     '& $border': {
       opacity: 0.35,
     },
@@ -126,14 +128,8 @@ const useKeyStyles = makeStyles({
   },
   content: {
     opacity: 0,
-    transition: 'inherit',
-    cursor: 'pointer',
     userSelect: 'none',
-    '$selectable &': {
-      pointerEvents: 'visibleFill',
-    },
-  },
-  label: {
+    transition: 'inherit',
     fontSize: '0.33px', // svg pixels
     textAnchor: 'middle',
     letterSpacing: 'normal',
@@ -167,6 +163,7 @@ const NoteKey: React.FC<NoteKeyProps> = props => {
 
   return (
     <g
+      onMouseDown={onClick}
       className={clsx(colorClass, classes.wrapper, classes[role], {
         [classes.expanded]: showAs === 'expanded',
         [classes.collapsed]: showAs === 'collapsed',
@@ -183,16 +180,9 @@ const NoteKey: React.FC<NoteKeyProps> = props => {
       <Hexagon clipped className={classes.border} />
       <Hexagon className={classes.edge} />
 
-      <g
-        onMouseDown={onClick}
-        clipPath="url(shapes_hexagonClip)"
-        className={classes.content}
-      >
-        <circle cx={0} cy={0} r={0.5} fill="none" />
-        <text x="0" y="0.125" className={classes.label}>
-          {label}
-        </text>
-      </g>
+      <text x="0" y="0.125" className={classes.content}>
+        {label}
+      </text>
     </g>
   );
 };
