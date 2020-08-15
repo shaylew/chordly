@@ -26,6 +26,14 @@ export default class MyApp extends App {
             name="viewport"
             content="minimum-scale=1, initial-scale=1, width=device-width"
           />
+          <meta property="og:title" content="Chordly" />
+          <meta property="og:image" content="https://chordly.xyz/preview.png" />
+          <meta
+            property="og:description"
+            content="An interactive chord progression explorer."
+          />
+          <meta property="og:url" content="https://chordly.xyz" />
+          <meta name="twitter:card" content="summary_large_image" />
         </Head>
         <ThemeProvider theme={theme}>
           {/* CssBaseline kickstart an elegant, consistent, and simple baseline to build upon. */}
