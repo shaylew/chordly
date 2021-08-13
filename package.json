@@ -21,7 +21,7 @@
     "@material-ui/icons": "^4.9.1",
     "@xstate/react": "^1.0.0-rc.3",
     "clsx": "^1.1.0",
-    "next": "^9.3.2",
+    "next": "^11.1.0",
     "react": "^16.13.0",
     "react-dom": "^16.13.0",
     "tone": "^14.5.41",
